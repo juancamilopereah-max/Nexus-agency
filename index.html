@@ -153,7 +153,15 @@ body {
 .typing-dot:nth-child(3) { animation-delay: 0.3s; }
 @keyframes typingBounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
 
-#chat-input-area { padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 8px; }
+#chat-input-area { padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 8px; }
+#input-row { display: flex; gap: 8px; }
+#notion-row { display: flex; gap: 8px; align-items: center; }
+#notion-btn { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.45); font-family: 'VT323', monospace; font-size: 15px; cursor: pointer; border-radius: 2px; transition: all 0.2s; }
+#notion-btn:hover { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.07); }
+#notion-btn.on { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.1); }
+#notion-status { font-family: 'VT323', monospace; font-size: 14px; color: rgba(255,255,255,0.25); }
+#notion-status.ok { color: #00ff88; }
+#notion-status.err { color: #ff4444; }
 #chat-input {
   flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.3);
   color: var(--text); font-family: 'VT323', monospace; font-size: 18px;
@@ -366,8 +374,14 @@ body {
   </div>
   <div id="chat-messages"></div>
   <div id="chat-input-area">
-    <input type="text" id="chat-input" placeholder="Escribe tu mensaje..." maxlength="500"/>
-    <button id="send-btn" onclick="sendMessage()">ENVIAR</button>
+    <div id="input-row">
+      <input type="text" id="chat-input" placeholder="Escribe tu mensaje..." maxlength="500"/>
+      <button id="send-btn" onclick="sendMessage()">ENVIAR</button>
+    </div>
+    <div id="notion-row">
+      <button id="notion-btn" onclick="toggleNotion()">📄 Guardar en Notion</button>
+      <span id="notion-status">Desactivado</span>
+    </div>
   </div>
 </div>
 
@@ -515,6 +529,25 @@ function showTyping() {
 }
 function hideTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
 
+// NOTION
+let notionOn = false;
+function toggleNotion() {
+  notionOn = !notionOn;
+  const btn = document.getElementById('notion-btn');
+  const st = document.getElementById('notion-status');
+  if (notionOn) {
+    btn.classList.add('on');
+    btn.textContent = '📄 Guardar en Notion ✓';
+    st.textContent = 'Activo — próxima respuesta se guardará';
+    st.className = 'ok';
+  } else {
+    btn.classList.remove('on');
+    btn.textContent = '📄 Guardar en Notion';
+    st.textContent = 'Desactivado';
+    st.className = '';
+  }
+}
+
 async function sendMessage() {
   if (!currentAgent || isLoading) return;
   const input = document.getElementById('chat-input');
@@ -529,13 +562,26 @@ async function sendMessage() {
 
   chatHistory[currentAgent].push({ role: 'user', content: text });
 
+  const saveThis = notionOn;
+  if (saveThis) {
+    notionOn = false;
+    const btn = document.getElementById('notion-btn');
+    btn.classList.remove('on');
+    btn.textContent = '📄 Guardar en Notion';
+    document.getElementById('notion-status').textContent = 'Guardando...';
+    document.getElementById('notion-status').className = '';
+  }
+
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system: agents[currentAgent].system,
-        messages: chatHistory[currentAgent]
+        messages: chatHistory[currentAgent],
+        saveToNotion: saveThis,
+        docTitle: text.substring(0, 60),
+        agentName: agents[currentAgent].name
       })
     });
     const data = await res.json();
@@ -543,6 +589,18 @@ async function sendMessage() {
     chatHistory[currentAgent].push({ role: 'assistant', content: reply });
     hideTyping();
     addMessage('agent', reply);
+
+    if (saveThis) {
+      const st = document.getElementById('notion-status');
+      if (data.savedToNotion) {
+        st.textContent = '✓ Guardado en Notion';
+        st.className = 'ok';
+      } else {
+        st.textContent = '⚠ Error al guardar';
+        st.className = 'err';
+      }
+      setTimeout(() => { st.textContent = 'Desactivado'; st.className = ''; }, 4000);
+    }
   } catch (e) {
     hideTyping();
     addMessage('agent', '⚠ Error de conexión con el agente.');
