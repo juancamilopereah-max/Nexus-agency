@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NEXUS AGENCY — Agencia Virtual</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
 
@@ -226,6 +227,66 @@ body {
   font-size: 12px; animation: floatUp 3s linear forwards; z-index: 50;
 }
 @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
+
+/* AUTH SCREEN */
+#auth-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #08080f;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 0;
+}
+#auth-box {
+  width: 380px; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(0,255,255,0.2);
+  padding: 40px 36px; display: flex; flex-direction: column; gap: 20px;
+  box-shadow: 0 0 40px rgba(0,255,255,0.08);
+}
+#auth-logo {
+  font-family: 'Press Start 2P', monospace; font-size: 13px;
+  color: var(--neon-cyan); text-align: center; line-height: 1.8;
+  text-shadow: 0 0 20px var(--neon-cyan); margin-bottom: 8px;
+}
+#auth-sub { font-size: 16px; color: rgba(255,255,255,0.35); text-align: center; letter-spacing: 2px; }
+#auth-tabs { display: flex; gap: 0; border: 1px solid rgba(255,255,255,0.1); }
+.auth-tab {
+  flex: 1; padding: 10px; font-family: 'Press Start 2P', monospace; font-size: 7px;
+  background: none; border: none; color: rgba(255,255,255,0.35); cursor: pointer;
+  transition: all 0.2s;
+}
+.auth-tab.active { background: rgba(0,255,255,0.1); color: var(--neon-cyan); }
+#auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-input {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: #fff; font-family: 'VT323', monospace; font-size: 18px;
+  padding: 12px 14px; outline: none; transition: border-color 0.2s;
+}
+.auth-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0,255,255,0.15); }
+.auth-input::placeholder { color: rgba(255,255,255,0.25); }
+#auth-btn {
+  padding: 14px; font-family: 'Press Start 2P', monospace; font-size: 8px;
+  background: var(--neon-cyan); color: #000; border: none; cursor: pointer;
+  transition: all 0.2s; margin-top: 4px;
+}
+#auth-btn:hover { box-shadow: 0 0 20px rgba(0,255,255,0.5); transform: scale(1.02); }
+#auth-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+#auth-msg { font-size: 15px; text-align: center; min-height: 20px; }
+#auth-msg.ok { color: var(--neon-green); }
+#auth-msg.err { color: #ff4444; }
+#user-bar {
+  position: fixed; top: 0; right: 0; z-index: 500;
+  display: none; align-items: center; gap: 12px;
+  padding: 8px 16px; background: rgba(0,0,0,0.8);
+  border-bottom: 1px solid rgba(0,255,255,0.1);
+  border-left: 1px solid rgba(0,255,255,0.1);
+}
+#user-bar.visible { display: flex; }
+#user-email { font-family: 'VT323', monospace; font-size: 15px; color: rgba(255,255,255,0.4); }
+#logout-btn {
+  font-family: 'Press Start 2P', monospace; font-size: 6px;
+  background: none; border: 1px solid rgba(255,0,0,0.3); color: #ff4444;
+  padding: 5px 8px; cursor: pointer; transition: all 0.2s;
+}
+#logout-btn:hover { background: rgba(255,0,0,0.1); border-color: #ff4444; }
 </style>
 </head>
 <body>
@@ -238,6 +299,30 @@ body {
 </div>
 
 <div id="starfield"></div>
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div id="auth-box">
+    <div id="auth-logo">NEXUS<br>AGENCY</div>
+    <div id="auth-sub">ACCESO PRIVADO</div>
+    <div id="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">INICIAR SESIÓN</button>
+      <button class="auth-tab" onclick="switchTab('signup')">REGISTRARSE</button>
+    </div>
+    <div id="auth-form">
+      <input class="auth-input" type="email" id="auth-email" placeholder="tu@email.com"/>
+      <input class="auth-input" type="password" id="auth-password" placeholder="Contraseña"/>
+      <button id="auth-btn" onclick="handleAuth()">ENTRAR</button>
+      <div id="auth-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- USER BAR -->
+<div id="user-bar">
+  <span id="user-email">usuario@email.com</span>
+  <button id="logout-btn" onclick="handleLogout()">SALIR</button>
+</div>
+
 <div id="scanlines"></div>
 
 <div id="header">
@@ -404,12 +489,7 @@ body {
 
 <div id="bottom-bar">
   <span id="ticker-content">
-    ◈ NEXUS AGENCY v0.1 BETA &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ AGENTES LISTOS &nbsp;&nbsp;|&nbsp;&nbsp;
-    🧠 ESTRATEGIA — Planificación activa &nbsp;&nbsp;|&nbsp;&nbsp;
-    🎬 CONTENIDO — Generación disponible &nbsp;&nbsp;|&nbsp;&nbsp;
-    💹 VENTAS — Análisis de pipeline &nbsp;&nbsp;|&nbsp;&nbsp;
-    📊 ANÁLISIS — Datos procesados &nbsp;&nbsp;|&nbsp;&nbsp;
-    ◈ HAZ CLIC EN UNA SALA PARA INTERACTUAR
+    ◈ NEXUS AGENCY v0.2 &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ 4 AGENTES ACTIVOS &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+1 Estrategia &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+2 Contenido &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+3 Ventas &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+4 Análisis &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+C Limpiar memoria &nbsp;&nbsp;|&nbsp;&nbsp; ESC Cerrar sala &nbsp;&nbsp;|&nbsp;&nbsp; ◈ HAZ CLIC EN UNA SALA PARA INTERACTUAR
   </span>
 </div>
 
@@ -766,10 +846,101 @@ document.querySelectorAll('.agent-sprite').forEach((s, i) => {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeChat();
-  if (e.key === '1') openChat('strategy');
-  if (e.key === '2') openChat('content');
-  if (e.key === '3') openChat('sales');
-  if (e.key === '4') openChat('analysis');
+});
+
+// ============================================================
+// SUPABASE AUTH
+// ============================================================
+const SUPABASE_URL = 'https://hmvduevkpgvkihqfwxnl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jicNZ2mxc5fjicKNKDZrAA_oMU2oNLJ';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let authMode = 'login';
+
+function switchTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i) => {
+    t.classList.toggle('active', (i===0 && mode==='login') || (i===1 && mode==='signup'));
+  });
+  document.getElementById('auth-btn').textContent = mode === 'login' ? 'ENTRAR' : 'CREAR CUENTA';
+  document.getElementById('auth-msg').textContent = '';
+  document.getElementById('auth-msg').className = '';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value.trim();
+  const msg = document.getElementById('auth-msg');
+  const btn = document.getElementById('auth-btn');
+
+  if (!email || !password) { msg.textContent = 'Completá todos los campos.'; msg.className = 'err'; return; }
+  if (password.length < 6) { msg.textContent = 'La contraseña debe tener al menos 6 caracteres.'; msg.className = 'err'; return; }
+
+  btn.disabled = true;
+  msg.textContent = 'Procesando...'; msg.className = '';
+
+  try {
+    let result;
+    if (authMode === 'login') {
+      result = await supabase.auth.signInWithPassword({ email, password });
+    } else {
+      result = await supabase.auth.signUp({ email, password });
+    }
+
+    if (result.error) {
+      let errMsg = result.error.message;
+      if (errMsg.includes('Invalid login')) errMsg = 'Email o contraseña incorrectos.';
+      if (errMsg.includes('already registered')) errMsg = 'Este email ya está registrado.';
+      msg.textContent = errMsg; msg.className = 'err';
+      btn.disabled = false;
+    } else {
+      if (authMode === 'signup' && !result.data.session) {
+        msg.textContent = '✓ Revisá tu email para confirmar tu cuenta.'; msg.className = 'ok';
+        btn.disabled = false;
+      } else {
+        enterApp(result.data.user);
+      }
+    }
+  } catch(e) {
+    msg.textContent = 'Error de conexión.'; msg.className = 'err';
+    btn.disabled = false;
+  }
+}
+
+function enterApp(user) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('user-bar').classList.add('visible');
+  document.getElementById('user-email').textContent = user.email;
+}
+
+async function handleLogout() {
+  await supabase.auth.signOut();
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('user-bar').classList.remove('visible');
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
+  document.getElementById('auth-msg').textContent = '';
+  closeChat();
+}
+
+// Check session on load
+supabase.auth.getSession().then(({ data }) => {
+  if (data.session) {
+    enterApp(data.session.user);
+  }
+});
+
+// Listen for auth changes
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) enterApp(session.user);
+  if (event === 'SIGNED_OUT') {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('user-bar').classList.remove('visible');
+  }
+});
+
+document.getElementById('auth-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleAuth();
 });
 </script>
 </body>
