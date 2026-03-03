@@ -162,6 +162,16 @@ body {
 #notion-status { font-family: 'VT323', monospace; font-size: 14px; color: rgba(255,255,255,0.25); }
 #notion-status.ok { color: #00ff88; }
 #notion-status.err { color: #ff4444; }
+#quick-actions { padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 6px; flex-wrap: wrap; background: rgba(255,255,255,0.02); }
+.qa-btn { padding: 4px 10px; font-family: 'VT323', monospace; font-size: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.55); cursor: pointer; border-radius: 2px; transition: all 0.15s; }
+.qa-btn:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
+#context-bar { padding: 6px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); display: none; }
+#context-bar.visible { display: flex; align-items: center; gap: 8px; }
+#context-text { font-family: 'VT323', monospace; font-size: 13px; color: rgba(255,255,255,0.3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#context-clear { font-family: 'VT323', monospace; font-size: 12px; color: rgba(255,0,0,0.4); cursor: pointer; background: none; border: none; padding: 0; }
+#context-clear:hover { color: #ff4444; }
+#gen-doc-btn { width: 100%; padding: 8px; border: 1px dashed rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); font-family: 'VT323', monospace; font-size: 15px; cursor: pointer; border-radius: 2px; transition: all 0.2s; margin-top: 4px; }
+#gen-doc-btn:hover { border-color: #00ccff; color: #00ccff; background: rgba(0,204,255,0.06); }
 #chat-input {
   flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.3);
   color: var(--text); font-family: 'VT323', monospace; font-size: 18px;
@@ -372,6 +382,12 @@ body {
     </div>
     <button id="close-chat" onclick="closeChat()">✕</button>
   </div>
+  <div id="context-bar">
+    <span style="font-size:11px;opacity:0.4">🧠</span>
+    <span id="context-text">Sin contexto compartido</span>
+    <button id="context-clear" onclick="clearContext()">✕ limpiar</button>
+  </div>
+  <div id="quick-actions"></div>
   <div id="chat-messages"></div>
   <div id="chat-input-area">
     <div id="input-row">
@@ -382,17 +398,13 @@ body {
       <button id="notion-btn" onclick="toggleNotion()">📄 Guardar en Notion</button>
       <span id="notion-status">Desactivado</span>
     </div>
+    <button id="gen-doc-btn" onclick="generateDoc()">⚡ Generar documento completo</button>
   </div>
 </div>
 
 <div id="bottom-bar">
   <span id="ticker-content">
-    ◈ NEXUS AGENCY v0.1 BETA &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ AGENTES LISTOS &nbsp;&nbsp;|&nbsp;&nbsp;
-    🧠 ESTRATEGIA — Planificación activa &nbsp;&nbsp;|&nbsp;&nbsp;
-    🎬 CONTENIDO — Generación disponible &nbsp;&nbsp;|&nbsp;&nbsp;
-    💹 VENTAS — Análisis de pipeline &nbsp;&nbsp;|&nbsp;&nbsp;
-    📊 ANÁLISIS — Datos procesados &nbsp;&nbsp;|&nbsp;&nbsp;
-    ◈ HAZ CLIC EN UNA SALA PARA INTERACTUAR
+    ◈ NEXUS AGENCY v0.2 &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ 4 AGENTES ACTIVOS &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+1 Estrategia &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+2 Contenido &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+3 Ventas &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+4 Análisis &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+C Limpiar memoria &nbsp;&nbsp;|&nbsp;&nbsp; ESC Cerrar sala &nbsp;&nbsp;|&nbsp;&nbsp; ◈ HAZ CLIC EN UNA SALA PARA INTERACTUAR
   </span>
 </div>
 
@@ -443,24 +455,57 @@ const agents = {
   strategy: {
     name:'NEXUS-S', dept:'Sala de Estrategia', emoji:'🧠', color:'#bf00ff',
     greeting:'◈ NEXUS-S EN LÍNEA.\n\nSoy tu agente de estrategia. Analizo mercados, defino posicionamiento y estructuro planes de negocio.\n\n¿En qué área estratégica trabajamos hoy?',
-    system:'Eres NEXUS-S, agente de estrategia de NEXUS AGENCY. Personalidad: analítico, directo, con visión clara. Especialidad: estrategia de negocio, posicionamiento, planificación, análisis competitivo, validación de ideas. Responde en español, máximo 180 palabras, sé directo y útil. Empieza con "◈ NEXUS-S:" ocasionalmente.'
+    system:'Eres NEXUS-S, agente de estrategia de NEXUS AGENCY. Personalidad: analítico, directo, con visión clara. Especialidad: estrategia de negocio, posicionamiento, planificación, análisis competitivo, validación de ideas. Responde en español, máximo 180 palabras, sé directo y útil.',
+    quickActions: ['¿Cómo valido mi idea?', 'Crea un plan de 90 días', 'Analiza mi competencia', 'Define mi propuesta de valor', 'Ayúdame a hacer un pitch']
   },
   content: {
     name:'NEXUS-C', dept:'Sala de Contenido', emoji:'🎬', color:'#ff6b00',
     greeting:'◈ NEXUS-C ACTIVO.\n\nSoy tu agente de contenido. Creo copys, guiones, hooks y narrativas que conectan con audiencias reales.\n\n¿Qué contenido creamos?',
-    system:'Eres NEXUS-C, agente de contenido de NEXUS AGENCY. Personalidad: creativo, energético, instinto narrativo. Especialidad: copywriting, guiones, hooks para redes, storytelling, contenido viral. Responde en español, máximo 180 palabras, da ejemplos concretos. Empieza con "◈ NEXUS-C:" ocasionalmente.'
+    system:'Eres NEXUS-C, agente de contenido de NEXUS AGENCY. Personalidad: creativo, energético, instinto narrativo. Especialidad: copywriting, guiones, hooks para redes, storytelling, contenido viral. Responde en español, máximo 180 palabras, da ejemplos concretos.',
+    quickActions: ['Escribe un hook viral', 'Caption para Instagram', 'Guion para video de 60s', 'Ideas de contenido semanal', 'Email de bienvenida']
   },
   sales: {
     name:'NEXUS-V', dept:'Sala de Ventas', emoji:'💹', color:'#00ff88',
     greeting:'◈ NEXUS-V CONECTADO.\n\nSoy tu agente de ventas. Estructuro propuestas, optimizo funnels y ayudo a cerrar más negocios.\n\n¿Qué quieres vender o mejorar?',
-    system:'Eres NEXUS-V, agente de ventas de NEXUS AGENCY. Personalidad: persuasivo, orientado a resultados. Especialidad: propuestas comerciales, scripts de venta, funnels, pricing, manejo de objeciones. Responde en español, máximo 180 palabras, enfocado en acción. Empieza con "◈ NEXUS-V:" ocasionalmente.'
+    system:'Eres NEXUS-V, agente de ventas de NEXUS AGENCY. Personalidad: persuasivo, orientado a resultados. Especialidad: propuestas comerciales, scripts de venta, funnels, pricing, manejo de objeciones. Responde en español, máximo 180 palabras, enfocado en acción.',
+    quickActions: ['Crea una propuesta comercial', 'Script para llamada de ventas', 'Cómo manejar objeciones', 'Define mi pricing', 'Escribe un follow-up']
   },
   analysis: {
     name:'NEXUS-A', dept:'Sala de Análisis', emoji:'📊', color:'#00ffff',
     greeting:'◈ NEXUS-A INICIALIZADO.\n\nSoy tu agente de análisis. Proceso datos, interpreto métricas e identifico patrones accionables.\n\n¿Qué analizamos?',
-    system:'Eres NEXUS-A, agente analítico de NEXUS AGENCY. Personalidad: metódico, basado en datos, objetivo. Especialidad: métricas, KPIs, benchmarking, insights accionables, reporting. Responde en español, máximo 180 palabras, usa estructura cuando ayude. Empieza con "◈ NEXUS-A:" ocasionalmente.'
+    system:'Eres NEXUS-A, agente analítico de NEXUS AGENCY. Personalidad: metódico, basado en datos, objetivo. Especialidad: métricas, KPIs, benchmarking, insights accionables, reporting. Responde en español, máximo 180 palabras, usa estructura cuando ayude.',
+    quickActions: ['¿Qué KPIs debo medir?', 'Analiza estas métricas', 'Crea un reporte semanal', 'Benchmarking de mi sector', 'Dame insights accionables']
   }
 };
+
+// SHARED CONTEXT — memoria entre salas
+let sharedContext = [];
+function addToContext(role, text, agentName) {
+  sharedContext.push({ role, text: text.substring(0,150), agentName });
+  if (sharedContext.length > 20) sharedContext.shift();
+  updateContextBar();
+}
+function getContextSummary() {
+  if (sharedContext.length === 0) return '';
+  const lines = sharedContext.slice(-8).map(m => `[${m.agentName}] ${m.role === 'user' ? 'Usuario' : m.agentName}: ${m.text}`);
+  return '\n\nCONTEXTO DE CONVERSACIONES ANTERIORES EN ESTA SESIÓN (úsalo para dar respuestas coherentes):\n' + lines.join('\n');
+}
+function updateContextBar() {
+  const bar = document.getElementById('context-bar');
+  const txt = document.getElementById('context-text');
+  if (sharedContext.length > 0) {
+    bar.classList.add('visible');
+    const last = sharedContext[sharedContext.length-1];
+    txt.textContent = sharedContext.length + ' msgs en memoria · "' + last.text.substring(0,45) + '..."';
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+function clearContext() {
+  sharedContext = [];
+  updateContextBar();
+  showNotification('Contexto limpiado', '#ff4444');
+}
 
 let currentAgent = null;
 let chatHistory = {};
@@ -491,10 +536,23 @@ function openChat(key) {
     msgs.scrollTop = msgs.scrollHeight;
   }
 
+  // Render quick actions
+  const qa = document.getElementById('quick-actions');
+  qa.innerHTML = agent.quickActions.map(q => `<button class="qa-btn" onclick="quickSend(this)">${q}</button>`).join('');
+
+  // Update context bar
+  updateContextBar();
+
   panel.classList.add('open');
   showNotification(`${agent.emoji} ${agent.name} CONECTADO`, agent.color);
   spawnParticles(agent.color);
   setTimeout(() => document.getElementById('chat-input').focus(), 400);
+}
+
+function quickSend(btn) {
+  if (!currentAgent || isLoading) return;
+  document.getElementById('chat-input').value = btn.textContent;
+  sendMessage();
 }
 
 function closeChat() {
@@ -577,7 +635,7 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: agents[currentAgent].system,
+        system: agents[currentAgent].system + getContextSummary(),
         messages: chatHistory[currentAgent],
         saveToNotion: saveThis,
         docTitle: text.substring(0, 60),
@@ -587,6 +645,8 @@ async function sendMessage() {
     const data = await res.json();
     const reply = data.content?.[0]?.text || '⚠ Error de conexión.';
     chatHistory[currentAgent].push({ role: 'assistant', content: reply });
+    addToContext('user', text, agents[currentAgent].name);
+    addToContext('agent', reply, agents[currentAgent].name);
     hideTyping();
     addMessage('agent', reply);
 
@@ -614,6 +674,63 @@ async function sendMessage() {
 document.getElementById('chat-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
+
+// GENERATE FULL DOCUMENT
+async function generateDoc() {
+  if (!currentAgent || isLoading) return;
+  const agent = agents[currentAgent];
+  const btn = document.getElementById('gen-doc-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando documento...';
+
+  const docPrompts = {
+    strategy: 'Basándote en nuestra conversación, crea un documento estratégico completo con: resumen ejecutivo, análisis de situación, objetivos, estrategia propuesta, plan de acción con pasos concretos y métricas de éxito. Usa formato estructurado con secciones claras.',
+    content: 'Basándote en nuestra conversación, crea un plan de contenido completo con: estrategia de contenido, calendario de publicaciones para 30 días, ejemplos de posts/guiones listos para usar, y recomendaciones de canales. Formato estructurado.',
+    sales: 'Basándote en nuestra conversación, crea una propuesta comercial completa con: presentación del servicio/producto, propuesta de valor, pricing, proceso de trabajo, casos de uso, y llamada a la acción. Formato profesional listo para enviar.',
+    analysis: 'Basándote en nuestra conversación, crea un reporte de análisis completo con: resumen ejecutivo, métricas clave, análisis de tendencias, hallazgos principales, recomendaciones accionables y próximos pasos. Formato de reporte profesional.'
+  };
+
+  const contextHist = chatHistory[currentAgent] && chatHistory[currentAgent].length > 0
+    ? chatHistory[currentAgent]
+    : [{ role: 'user', content: 'Crea un documento de ejemplo para tu especialidad.' }];
+
+  isLoading = true;
+  showTyping();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: agent.system + getContextSummary() + '\n\nCuando generes documentos, usa formato estructurado con secciones, subtítulos y listas. Sé detallado y profesional. Máximo 500 palabras.',
+        messages: [...contextHist, { role: 'user', content: docPrompts[currentAgent] }],
+        saveToNotion: true,
+        docTitle: `[DOC] ${agent.name} — ${new Date().toLocaleDateString('es-ES')}`,
+        agentName: agent.name
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || '⚠ Error generando documento.';
+    chatHistory[currentAgent].push({ role: 'user', content: docPrompts[currentAgent] });
+    chatHistory[currentAgent].push({ role: 'assistant', content: reply });
+    hideTyping();
+    addMessage('agent', reply);
+
+    const st = document.getElementById('notion-status');
+    if (data.savedToNotion) {
+      st.textContent = '✓ Documento guardado en Notion';
+      st.className = 'ok';
+      setTimeout(() => { st.textContent = 'Desactivado'; st.className = ''; }, 4000);
+    }
+  } catch(e) {
+    hideTyping();
+    addMessage('agent', '⚠ Error generando documento.');
+  }
+
+  isLoading = false;
+  btn.disabled = false;
+  btn.textContent = '⚡ Generar documento completo';
+}
 
 function showNotification(text, color) {
   const n = document.getElementById('notification');
@@ -644,10 +761,12 @@ document.querySelectorAll('.agent-sprite').forEach((s, i) => {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeChat();
-  if (e.key === '1') openChat('strategy');
-  if (e.key === '2') openChat('content');
-  if (e.key === '3') openChat('sales');
-  if (e.key === '4') openChat('analysis');
+  // Option/Alt + number to switch rooms, Option+C to clear context
+  if (e.altKey && e.key === '1') { e.preventDefault(); openChat('strategy'); }
+  if (e.altKey && e.key === '2') { e.preventDefault(); openChat('content'); }
+  if (e.altKey && e.key === '3') { e.preventDefault(); openChat('sales'); }
+  if (e.altKey && e.key === '4') { e.preventDefault(); openChat('analysis'); }
+  if (e.altKey && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); clearContext(); }
 });
 </script>
 </body>
