@@ -404,7 +404,12 @@ body {
 
 <div id="bottom-bar">
   <span id="ticker-content">
-    ◈ NEXUS AGENCY v0.2 &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ 4 AGENTES ACTIVOS &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+1 Estrategia &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+2 Contenido &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+3 Ventas &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+4 Análisis &nbsp;&nbsp;|&nbsp;&nbsp; ⌥+C Limpiar memoria &nbsp;&nbsp;|&nbsp;&nbsp; ESC Cerrar sala &nbsp;&nbsp;|&nbsp;&nbsp; ◈ HAZ CLIC EN UNA SALA PARA INTERACTUAR
+    ◈ NEXUS AGENCY v0.1 BETA &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ AGENTES LISTOS &nbsp;&nbsp;|&nbsp;&nbsp;
+    🧠 ESTRATEGIA — Planificación activa &nbsp;&nbsp;|&nbsp;&nbsp;
+    🎬 CONTENIDO — Generación disponible &nbsp;&nbsp;|&nbsp;&nbsp;
+    💹 VENTAS — Análisis de pipeline &nbsp;&nbsp;|&nbsp;&nbsp;
+    📊 ANÁLISIS — Datos procesados &nbsp;&nbsp;|&nbsp;&nbsp;
+    ◈ HAZ CLIC EN UNA SALA PARA INTERACTUAR
   </span>
 </div>
 
@@ -761,12 +766,10 @@ document.querySelectorAll('.agent-sprite').forEach((s, i) => {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeChat();
-  // Option/Alt + number to switch rooms, Option+C to clear context
-  if (e.altKey && e.key === '1') { e.preventDefault(); openChat('strategy'); }
-  if (e.altKey && e.key === '2') { e.preventDefault(); openChat('content'); }
-  if (e.altKey && e.key === '3') { e.preventDefault(); openChat('sales'); }
-  if (e.altKey && e.key === '4') { e.preventDefault(); openChat('analysis'); }
-  if (e.altKey && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); clearContext(); }
+  if (e.key === '1') openChat('strategy');
+  if (e.key === '2') openChat('content');
+  if (e.key === '3') openChat('sales');
+  if (e.key === '4') openChat('analysis');
 });
 </script>
 </body>
