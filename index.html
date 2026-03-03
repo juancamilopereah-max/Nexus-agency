@@ -69,9 +69,17 @@ body {
 #world {
   position: fixed; inset: 52px 0 32px 0; z-index: 10;
   display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 20%, #12082a 0%, #050510 100%);
+  transition: background 4s ease;
+}
+@keyframes ambientPulse { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
+#ambient-light {
+  position:absolute; inset:0; pointer-events:none; z-index:1;
+  background: radial-gradient(ellipse at 50% 10%, rgba(100,0,255,0.06) 0%, transparent 60%);
+  animation: ambientPulse 10s infinite ease-in-out;
 }
 
-#isometric-scene { position: relative; width: 900px; height: 560px; }
+#isometric-scene { position: relative; width: 900px; height: 560px; z-index: 2; }
 
 .room { position: absolute; cursor: pointer; transition: filter 0.2s; }
 .room:hover { filter: brightness(1.35); }
@@ -84,38 +92,124 @@ body {
 }
 @keyframes roomPulse { from { opacity: 0.25; transform: scale(0.9); } to { opacity: 0.55; transform: scale(1.1); } }
 
-.agent-sprite { position: absolute; width: 24px; height: 36px; animation: agentBob 1.5s infinite alternate ease-in-out; cursor: pointer; z-index: 20; }
-@keyframes agentBob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
-@keyframes agentThink { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
-@keyframes agentWalk { 0% { transform: translateX(0); } 25% { transform: translateX(6px) translateY(-2px); } 50% { transform: translateX(12px); } 75% { transform: translateX(6px) translateY(-2px); } 100% { transform: translateX(0); } }
-@keyframes statusPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-@keyframes eyeBlink { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
-.agent-sprite.thinking { animation: agentThink 0.6s infinite ease-in-out !important; }
-.agent-sprite.walking { animation: agentWalk 0.4s infinite linear !important; }
-.sprite-eye-l, .sprite-eye-r { animation: eyeBlink 4s infinite; }
-.agent-status {
-  position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
-  font-family: 'VT323', monospace; font-size: 12px; white-space: nowrap;
-  padding: 2px 6px; border-radius: 2px; border: 1px solid;
+/* ═══ AGENT SPRITES — ENHANCED ═══ */
+.agent-sprite {
+  position: absolute; width: 48px; height: 72px;
+  animation: agentBob 2s infinite alternate ease-in-out;
+  cursor: pointer; z-index: 20; filter: drop-shadow(0 0 8px currentColor);
 }
-.status-available { color: #00ff88; border-color: #00ff88; background: rgba(0,255,136,0.1); }
-.status-busy { color: #ff6b00; border-color: #ff6b00; background: rgba(255,107,0,0.1); animation: statusPulse 1s infinite; }
-.status-thinking { color: #00ffff; border-color: #00ffff; background: rgba(0,255,255,0.1); animation: statusPulse 0.5s infinite; }
+@keyframes agentBob { from { transform: translateY(0px); } to { transform: translateY(-8px); } }
+@keyframes agentThink {
+  0%,100% { transform: translateY(0) rotate(-4deg) scale(1); }
+  50% { transform: translateY(-12px) rotate(4deg) scale(1.05); }
+}
+@keyframes agentWalk {
+  0% { transform: translateX(0) scaleX(1); }
+  25% { transform: translateX(10px) translateY(-3px) scaleX(1); }
+  50% { transform: translateX(20px) scaleX(1); }
+  75% { transform: translateX(10px) translateY(-3px) scaleX(1); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+@keyframes agentClick {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3) translateY(-10px); }
+  60% { transform: scale(0.9) translateY(0); }
+  100% { transform: scale(1); }
+}
+@keyframes statusPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes eyeBlink { 0%,88%,100% { transform: scaleY(1); } 92%,96% { transform: scaleY(0.05); } }
+@keyframes particleFloat {
+  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0.8; }
+  100% { transform: translateY(-40px) translateX(var(--dx,10px)) scale(0); opacity: 0; }
+}
+@keyframes auraGlow {
+  0%,100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+}
+@keyframes roomFlash {
+  0% { opacity: 0; } 20% { opacity: 0.6; } 100% { opacity: 0; }
+}
+@keyframes worldActivity {
+  0%,100% { opacity: 0.6; } 50% { opacity: 1; }
+}
+
+.agent-sprite.thinking { animation: agentThink 0.7s infinite ease-in-out !important; }
+.agent-sprite.walking { animation: agentWalk 0.5s 1 linear !important; }
+.agent-sprite.clicked { animation: agentClick 0.5s 1 ease-out !important; }
+
+/* Sprite parts — bigger */
+.sprite-head { width: 28px; height: 28px; position: absolute; left: 10px; top: 0; border-radius: 4px; }
+.sprite-body { width: 32px; height: 22px; position: absolute; left: 8px; top: 26px; border-radius: 3px; }
+.sprite-arm-l { width: 8px; height: 18px; position: absolute; left: 1px; top: 28px; border-radius: 3px; }
+.sprite-arm-r { width: 8px; height: 18px; position: absolute; right: 1px; top: 28px; border-radius: 3px; }
+.sprite-leg-l { width: 12px; height: 18px; position: absolute; left: 9px; top: 48px; border-radius: 2px; }
+.sprite-leg-r { width: 12px; height: 18px; position: absolute; right: 9px; top: 48px; border-radius: 2px; }
+.sprite-eye-l, .sprite-eye-r {
+  position: absolute; width: 6px; height: 6px;
+  background: #000; top: 9px; border-radius: 1px;
+  animation: eyeBlink 5s infinite;
+}
+.sprite-eye-l { left: 5px; } .sprite-eye-r { right: 5px; }
+.sprite-accessory { position: absolute; font-size: 10px; top: -4px; left: 50%; transform: translateX(-50%); }
+
+/* Halo / shadow */
+.agent-halo {
+  position: absolute; width: 50px; height: 14px;
+  bottom: -6px; left: -1px; border-radius: 50%;
+  filter: blur(8px); opacity: 0.6;
+  animation: auraGlow 2s infinite ease-in-out;
+}
+
+/* Aura ring */
+.agent-aura {
+  position: absolute; width: 64px; height: 64px;
+  border-radius: 50%; border: 2px solid;
+  top: -8px; left: -8px; opacity: 0;
+  animation: auraGlow 3s infinite ease-in-out;
+  pointer-events: none;
+}
+
+/* Status badge */
+.agent-status {
+  position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+  font-family: 'VT323', monospace; font-size: 13px; white-space: nowrap;
+  padding: 3px 8px; border: 1px solid; letter-spacing: 1px;
+}
+.status-available { color: #00ff88; border-color: #00ff88; background: rgba(0,255,136,0.08); }
+.status-busy { color: #ffaa00; border-color: #ffaa00; background: rgba(255,170,0,0.08); animation: statusPulse 1.5s infinite; }
+.status-thinking { color: #00ffff; border-color: #00ffff; background: rgba(0,255,255,0.1); animation: statusPulse 0.4s infinite; }
+
+/* Thought bubble */
 .thought-bubble {
-  position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
-  font-family: 'VT323', monospace; font-size: 13px; color: #fff;
-  background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2);
-  padding: 3px 8px; white-space: nowrap; opacity: 0;
-  transition: opacity 0.3s; pointer-events: none; border-radius: 2px;
+  position: absolute; top: -36px; left: 50%; transform: translateX(-50%);
+  font-family: 'VT323', monospace; font-size: 14px; color: #fff;
+  background: rgba(5,5,20,0.92); border: 1px solid rgba(255,255,255,0.15);
+  padding: 4px 10px; white-space: nowrap; opacity: 0;
+  transition: opacity 0.25s; pointer-events: none;
+  box-shadow: 0 0 12px rgba(255,255,255,0.08);
+}
+.thought-bubble::after {
+  content: ''; position: absolute; bottom: -6px; left: 50%;
+  transform: translateX(-50%); width: 6px; height: 6px;
+  background: rgba(5,5,20,0.92); border-right: 1px solid rgba(255,255,255,0.15);
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  transform: translateX(-50%) rotate(45deg);
 }
 .agent-sprite:hover .thought-bubble { opacity: 1; }
-.sprite-head { width: 16px; height: 16px; position: absolute; left: 4px; top: 0; border-radius: 2px; }
-.sprite-body { width: 18px; height: 12px; position: absolute; left: 3px; top: 14px; border-radius: 2px; }
-.sprite-leg-l { width: 6px; height: 10px; position: absolute; left: 4px; top: 26px; border-radius: 1px; }
-.sprite-leg-r { width: 6px; height: 10px; position: absolute; left: 14px; top: 26px; border-radius: 1px; }
-.sprite-eye-l, .sprite-eye-r { position: absolute; width: 3px; height: 3px; background: #000; top: 5px; }
-.sprite-eye-l { left: 3px; } .sprite-eye-r { right: 3px; }
-.agent-halo { position: absolute; width: 30px; height: 8px; bottom: -4px; left: -3px; border-radius: 50%; filter: blur(6px); opacity: 0.7; }
+
+/* Room flash overlay */
+.room-flash {
+  position: absolute; inset: 0; pointer-events: none;
+  background: white; opacity: 0; border-radius: 2px;
+  animation: none;
+}
+.room-flash.active { animation: roomFlash 0.5s ease-out forwards; }
+
+/* Floating particles */
+.particle {
+  position: absolute; width: 4px; height: 4px; border-radius: 50%;
+  pointer-events: none; animation: particleFloat 1.2s ease-out forwards;
+}
 
 .room-label {
   position: absolute; font-family: 'Press Start 2P', monospace; font-size: 7px;
@@ -358,6 +452,7 @@ body {
 </div>
 
 <div id="world">
+  <div id="ambient-light"></div>
   <div id="isometric-scene">
 
     <!-- ESTRATEGIA -->
@@ -378,15 +473,23 @@ body {
         <text x="165" y="101" text-anchor="middle" font-family="VT323" font-size="9" fill="#bf00ff">ESTRATEGIA</text>
         <polyline points="4,67 110,14 216,67" fill="none" stroke="#bf00ff" stroke-width="2" opacity="0.8"/>
       </svg>
-      <div class="agent-sprite" style="left:80px;top:60px;">
-        <div class="sprite-head" style="background:#7700cc;border:1px solid #bf00ff;"><div class="sprite-eye-l"></div><div class="sprite-eye-r"></div></div>
-        <div class="sprite-body" style="background:#5500aa;border:1px solid #9900ee;"></div>
-        <div class="sprite-leg-l" style="background:#440088;"></div>
-        <div class="sprite-leg-r" style="background:#440088;"></div>
+      <div class="agent-sprite" id="sprite-strategy" style="left:85px;top:45px;color:#bf00ff;">
+        <div class="agent-aura" style="border-color:#bf00ff;opacity:0.2;"></div>
+        <div class="sprite-accessory">🎩</div>
+        <div class="sprite-head" style="background:#7700cc;border:2px solid #bf00ff;box-shadow:0 0 10px #bf00ff44;">
+          <div class="sprite-eye-l"></div><div class="sprite-eye-r"></div>
+        </div>
+        <div class="sprite-arm-l" style="background:#5500aa;border:1px solid #9900ee;transform:rotate(15deg);"></div>
+        <div class="sprite-arm-r" style="background:#5500aa;border:1px solid #9900ee;transform:rotate(-15deg);"></div>
+        <div class="sprite-body" style="background:#5500aa;border:2px solid #9900ee;box-shadow:inset 0 0 8px #bf00ff22;">
+        </div>
+        <div class="sprite-leg-l" style="background:#440088;border:1px solid #7700cc;"></div>
+        <div class="sprite-leg-r" style="background:#440088;border:1px solid #7700cc;"></div>
         <div class="agent-halo" style="background:var(--neon-purple);"></div>
-        <div class="thought-bubble">Listo para planificar</div>
+        <div class="thought-bubble">🧠 Listo para planificar</div>
         <div class="agent-status status-available" id="status-strategy">● DISPONIBLE</div>
       </div>
+      <div class="room-flash"></div>
       <div class="room-label" style="color:var(--neon-purple);border-color:var(--neon-purple);">🧠 ESTRATEGIA</div>
     </div>
 
@@ -407,15 +510,23 @@ body {
         <text x="165" y="101" text-anchor="middle" font-family="VT323" font-size="9" fill="#ff6b00">CONTENIDO</text>
         <polyline points="4,67 110,14 216,67" fill="none" stroke="#ff6b00" stroke-width="2" opacity="0.8"/>
       </svg>
-      <div class="agent-sprite" style="left:80px;top:60px;">
-        <div class="sprite-head" style="background:#cc4400;border:1px solid #ff6b00;"><div class="sprite-eye-l"></div><div class="sprite-eye-r"></div></div>
-        <div class="sprite-body" style="background:#aa3300;border:1px solid #ee5500;"></div>
-        <div class="sprite-leg-l" style="background:#882200;"></div>
-        <div class="sprite-leg-r" style="background:#882200;"></div>
+      <div class="agent-sprite" id="sprite-content" style="left:85px;top:45px;color:#ff6b00;">
+        <div class="agent-aura" style="border-color:#ff6b00;opacity:0.2;"></div>
+        <div class="sprite-accessory">🎬</div>
+        <div class="sprite-head" style="background:#cc4400;border:2px solid #ff6b00;box-shadow:0 0 10px #ff6b0044;">
+          <div class="sprite-eye-l"></div><div class="sprite-eye-r"></div>
+        </div>
+        <div class="sprite-arm-l" style="background:#aa3300;border:1px solid #ee5500;transform:rotate(-20deg);"></div>
+        <div class="sprite-arm-r" style="background:#aa3300;border:1px solid #ee5500;transform:rotate(20deg);"></div>
+        <div class="sprite-body" style="background:#aa3300;border:2px solid #ee5500;box-shadow:inset 0 0 8px #ff6b0022;">
+        </div>
+        <div class="sprite-leg-l" style="background:#882200;border:1px solid #cc4400;"></div>
+        <div class="sprite-leg-r" style="background:#882200;border:1px solid #cc4400;"></div>
         <div class="agent-halo" style="background:var(--neon-orange);"></div>
-        <div class="thought-bubble">Listo para crear</div>
+        <div class="thought-bubble">🎬 Listo para crear</div>
         <div class="agent-status status-available" id="status-content">● DISPONIBLE</div>
       </div>
+      <div class="room-flash"></div>
       <div class="room-label" style="color:var(--neon-orange);border-color:var(--neon-orange);">🎬 CONTENIDO</div>
     </div>
 
@@ -435,15 +546,23 @@ body {
         <text x="165" y="101" text-anchor="middle" font-family="VT323" font-size="9" fill="#00ff88">VENTAS</text>
         <polyline points="4,67 110,14 216,67" fill="none" stroke="#00ff88" stroke-width="2" opacity="0.8"/>
       </svg>
-      <div class="agent-sprite" style="left:80px;top:60px;">
-        <div class="sprite-head" style="background:#006633;border:1px solid #00ff88;"><div class="sprite-eye-l"></div><div class="sprite-eye-r"></div></div>
-        <div class="sprite-body" style="background:#005522;border:1px solid #00cc66;"></div>
-        <div class="sprite-leg-l" style="background:#004411;"></div>
-        <div class="sprite-leg-r" style="background:#004411;"></div>
+      <div class="agent-sprite" id="sprite-sales" style="left:85px;top:45px;color:#00ff88;">
+        <div class="agent-aura" style="border-color:#00ff88;opacity:0.2;"></div>
+        <div class="sprite-accessory">💼</div>
+        <div class="sprite-head" style="background:#006633;border:2px solid #00ff88;box-shadow:0 0 10px #00ff8844;">
+          <div class="sprite-eye-l"></div><div class="sprite-eye-r"></div>
+        </div>
+        <div class="sprite-arm-l" style="background:#005522;border:1px solid #00cc66;transform:rotate(10deg);"></div>
+        <div class="sprite-arm-r" style="background:#005522;border:1px solid #00cc66;transform:rotate(-10deg);"></div>
+        <div class="sprite-body" style="background:#005522;border:2px solid #00cc66;box-shadow:inset 0 0 8px #00ff8822;">
+        </div>
+        <div class="sprite-leg-l" style="background:#004411;border:1px solid #006633;"></div>
+        <div class="sprite-leg-r" style="background:#004411;border:1px solid #006633;"></div>
         <div class="agent-halo" style="background:var(--neon-green);"></div>
-        <div class="thought-bubble">Listo para vender</div>
+        <div class="thought-bubble">💹 Listo para vender</div>
         <div class="agent-status status-available" id="status-sales">● DISPONIBLE</div>
       </div>
+      <div class="room-flash"></div>
       <div class="room-label" style="color:var(--neon-green);border-color:var(--neon-green);">💹 VENTAS</div>
     </div>
 
@@ -463,15 +582,23 @@ body {
         <text x="165" y="101" text-anchor="middle" font-family="VT323" font-size="9" fill="#00ffff">ANÁLISIS</text>
         <polyline points="4,67 110,14 216,67" fill="none" stroke="#00ffff" stroke-width="2" opacity="0.8"/>
       </svg>
-      <div class="agent-sprite" style="left:80px;top:60px;">
-        <div class="sprite-head" style="background:#005555;border:1px solid #00ffff;"><div class="sprite-eye-l"></div><div class="sprite-eye-r"></div></div>
-        <div class="sprite-body" style="background:#004444;border:1px solid #00cccc;"></div>
-        <div class="sprite-leg-l" style="background:#003333;"></div>
-        <div class="sprite-leg-r" style="background:#003333;"></div>
+      <div class="agent-sprite" id="sprite-analysis" style="left:85px;top:45px;color:#00ffff;">
+        <div class="agent-aura" style="border-color:#00ffff;opacity:0.2;"></div>
+        <div class="sprite-accessory">🔬</div>
+        <div class="sprite-head" style="background:#005555;border:2px solid #00ffff;box-shadow:0 0 10px #00ffff44;">
+          <div class="sprite-eye-l"></div><div class="sprite-eye-r"></div>
+        </div>
+        <div class="sprite-arm-l" style="background:#004444;border:1px solid #00cccc;transform:rotate(25deg);"></div>
+        <div class="sprite-arm-r" style="background:#004444;border:1px solid #00cccc;transform:rotate(-25deg);"></div>
+        <div class="sprite-body" style="background:#004444;border:2px solid #00cccc;box-shadow:inset 0 0 8px #00ffff22;">
+        </div>
+        <div class="sprite-leg-l" style="background:#003333;border:1px solid #005555;"></div>
+        <div class="sprite-leg-r" style="background:#003333;border:1px solid #005555;"></div>
         <div class="agent-halo" style="background:var(--neon-cyan);"></div>
-        <div class="thought-bubble">Listo para analizar</div>
+        <div class="thought-bubble">📊 Listo para analizar</div>
         <div class="agent-status status-available" id="status-analysis">● DISPONIBLE</div>
       </div>
+      <div class="room-flash"></div>
       <div class="room-label" style="color:var(--neon-cyan);border-color:var(--neon-cyan);">📊 ANÁLISIS</div>
     </div>
 
@@ -632,7 +759,7 @@ let isLoading = false;
 function setAgentState(key, state) {
   const room = document.getElementById('room-' + key);
   if (!room) return;
-  const sprite = room.querySelector('.agent-sprite');
+  const sprite = document.getElementById('sprite-' + key) || room.querySelector('.agent-sprite');
   const status = document.getElementById('status-' + key);
   if (!sprite || !status) return;
 
@@ -641,7 +768,8 @@ function setAgentState(key, state) {
   if (state === 'thinking') {
     sprite.classList.add('thinking');
     status.className = 'agent-status status-thinking';
-    status.textContent = '● PENSANDO';
+    status.textContent = '◈ PENSANDO...';
+    spawnAgentParticles(key);
   } else if (state === 'busy') {
     status.className = 'agent-status status-busy';
     status.textContent = '● OCUPADO';
@@ -652,13 +780,77 @@ function setAgentState(key, state) {
 }
 
 function walkAgentToUser(key) {
+  const sprite = document.getElementById('sprite-' + key);
+  if (!sprite) return;
+  // Click bounce animation
+  sprite.classList.add('clicked');
+  setTimeout(() => sprite.classList.remove('clicked'), 500);
+  // Flash room
+  flashRoom(key);
+  // Walk after flash
+  setTimeout(() => {
+    sprite.classList.add('walking');
+    setTimeout(() => sprite.classList.remove('walking'), 600);
+  }, 100);
+}
+
+function flashRoom(key) {
   const room = document.getElementById('room-' + key);
   if (!room) return;
-  const sprite = room.querySelector('.agent-sprite');
-  if (!sprite) return;
-  sprite.classList.add('walking');
-  setTimeout(() => sprite.classList.remove('walking'), 800);
+  let flash = room.querySelector('.room-flash');
+  if (!flash) {
+    flash = document.createElement('div');
+    flash.className = 'room-flash';
+    room.appendChild(flash);
+  }
+  flash.classList.remove('active');
+  void flash.offsetWidth;
+  flash.classList.add('active');
 }
+
+function spawnAgentParticles(key) {
+  const sprite = document.getElementById('sprite-' + key);
+  if (!sprite) return;
+  const colors = { strategy: '#bf00ff', content: '#ff6b00', sales: '#00ff88', analysis: '#00ffff' };
+  const color = colors[key] || '#fff';
+  const room = document.getElementById('room-' + key);
+  if (!room) return;
+
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const dx = (Math.random() - 0.5) * 60;
+      p.style.cssText = `background:${color};left:${100 + Math.random()*20}px;top:${70 + Math.random()*10}px;--dx:${dx}px;box-shadow:0 0 4px ${color};`;
+      room.appendChild(p);
+      setTimeout(() => p.remove(), 1300);
+    }, i * 100);
+  }
+}
+
+// WORLD ACTIVITY — ticker messages that make the world feel alive
+const worldMessages = {
+  strategy: ['🧠 NEXUS-S analizando mercados...', '🧠 NEXUS-S actualizando estrategia...', '🧠 NEXUS-S validando hipótesis...'],
+  content: ['🎬 NEXUS-C generando contenido...', '🎬 NEXUS-C escribiendo hooks...', '🎬 NEXUS-C editando guión...'],
+  sales: ['💹 NEXUS-V procesando pipeline...', '💹 NEXUS-V optimizando funnel...', '💹 NEXUS-V preparando propuesta...'],
+  analysis: ['📊 NEXUS-A procesando datos...', '📊 NEXUS-A calculando métricas...', '📊 NEXUS-A generando reporte...']
+};
+
+function updateWorldTicker() {
+  const keys = ['strategy', 'content', 'sales', 'analysis'];
+  const key = keys[Math.floor(Math.random() * keys.length)];
+  const msgs = worldMessages[key];
+  const msg = msgs[Math.floor(Math.random() * msgs.length)];
+  const ticker = document.getElementById('ticker-content');
+  if (ticker) {
+    const extra = document.createElement('span');
+    extra.textContent = ' &nbsp;|&nbsp; ' + msg;
+    extra.innerHTML = ' &nbsp;&nbsp;|&nbsp;&nbsp; ' + msg;
+    // Just update inline
+  }
+}
+// Run world ticker every 8 seconds
+setInterval(updateWorldTicker, 8000);
 
 function openChat(key) {
   const agent = agents[key];
