@@ -86,6 +86,29 @@ body {
 
 .agent-sprite { position: absolute; width: 24px; height: 36px; animation: agentBob 1.5s infinite alternate ease-in-out; cursor: pointer; z-index: 20; }
 @keyframes agentBob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+@keyframes agentThink { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+@keyframes agentWalk { 0% { transform: translateX(0); } 25% { transform: translateX(6px) translateY(-2px); } 50% { transform: translateX(12px); } 75% { transform: translateX(6px) translateY(-2px); } 100% { transform: translateX(0); } }
+@keyframes statusPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes eyeBlink { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+.agent-sprite.thinking { animation: agentThink 0.6s infinite ease-in-out !important; }
+.agent-sprite.walking { animation: agentWalk 0.4s infinite linear !important; }
+.sprite-eye-l, .sprite-eye-r { animation: eyeBlink 4s infinite; }
+.agent-status {
+  position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+  font-family: 'VT323', monospace; font-size: 12px; white-space: nowrap;
+  padding: 2px 6px; border-radius: 2px; border: 1px solid;
+}
+.status-available { color: #00ff88; border-color: #00ff88; background: rgba(0,255,136,0.1); }
+.status-busy { color: #ff6b00; border-color: #ff6b00; background: rgba(255,107,0,0.1); animation: statusPulse 1s infinite; }
+.status-thinking { color: #00ffff; border-color: #00ffff; background: rgba(0,255,255,0.1); animation: statusPulse 0.5s infinite; }
+.thought-bubble {
+  position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+  font-family: 'VT323', monospace; font-size: 13px; color: #fff;
+  background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2);
+  padding: 3px 8px; white-space: nowrap; opacity: 0;
+  transition: opacity 0.3s; pointer-events: none; border-radius: 2px;
+}
+.agent-sprite:hover .thought-bubble { opacity: 1; }
 .sprite-head { width: 16px; height: 16px; position: absolute; left: 4px; top: 0; border-radius: 2px; }
 .sprite-body { width: 18px; height: 12px; position: absolute; left: 3px; top: 14px; border-radius: 2px; }
 .sprite-leg-l { width: 6px; height: 10px; position: absolute; left: 4px; top: 26px; border-radius: 1px; }
@@ -361,6 +384,8 @@ body {
         <div class="sprite-leg-l" style="background:#440088;"></div>
         <div class="sprite-leg-r" style="background:#440088;"></div>
         <div class="agent-halo" style="background:var(--neon-purple);"></div>
+        <div class="thought-bubble">Listo para planificar</div>
+        <div class="agent-status status-available" id="status-strategy">● DISPONIBLE</div>
       </div>
       <div class="room-label" style="color:var(--neon-purple);border-color:var(--neon-purple);">🧠 ESTRATEGIA</div>
     </div>
@@ -388,6 +413,8 @@ body {
         <div class="sprite-leg-l" style="background:#882200;"></div>
         <div class="sprite-leg-r" style="background:#882200;"></div>
         <div class="agent-halo" style="background:var(--neon-orange);"></div>
+        <div class="thought-bubble">Listo para crear</div>
+        <div class="agent-status status-available" id="status-content">● DISPONIBLE</div>
       </div>
       <div class="room-label" style="color:var(--neon-orange);border-color:var(--neon-orange);">🎬 CONTENIDO</div>
     </div>
@@ -414,6 +441,8 @@ body {
         <div class="sprite-leg-l" style="background:#004411;"></div>
         <div class="sprite-leg-r" style="background:#004411;"></div>
         <div class="agent-halo" style="background:var(--neon-green);"></div>
+        <div class="thought-bubble">Listo para vender</div>
+        <div class="agent-status status-available" id="status-sales">● DISPONIBLE</div>
       </div>
       <div class="room-label" style="color:var(--neon-green);border-color:var(--neon-green);">💹 VENTAS</div>
     </div>
@@ -440,6 +469,8 @@ body {
         <div class="sprite-leg-l" style="background:#003333;"></div>
         <div class="sprite-leg-r" style="background:#003333;"></div>
         <div class="agent-halo" style="background:var(--neon-cyan);"></div>
+        <div class="thought-bubble">Listo para analizar</div>
+        <div class="agent-status status-available" id="status-analysis">● DISPONIBLE</div>
       </div>
       <div class="room-label" style="color:var(--neon-cyan);border-color:var(--neon-cyan);">📊 ANÁLISIS</div>
     </div>
@@ -597,6 +628,38 @@ let chatHistory = {};
 let domCache = {};
 let isLoading = false;
 
+// AGENT STATE MANAGEMENT
+function setAgentState(key, state) {
+  const room = document.getElementById('room-' + key);
+  if (!room) return;
+  const sprite = room.querySelector('.agent-sprite');
+  const status = document.getElementById('status-' + key);
+  if (!sprite || !status) return;
+
+  sprite.classList.remove('thinking', 'walking');
+
+  if (state === 'thinking') {
+    sprite.classList.add('thinking');
+    status.className = 'agent-status status-thinking';
+    status.textContent = '● PENSANDO';
+  } else if (state === 'busy') {
+    status.className = 'agent-status status-busy';
+    status.textContent = '● OCUPADO';
+  } else {
+    status.className = 'agent-status status-available';
+    status.textContent = '● DISPONIBLE';
+  }
+}
+
+function walkAgentToUser(key) {
+  const room = document.getElementById('room-' + key);
+  if (!room) return;
+  const sprite = room.querySelector('.agent-sprite');
+  if (!sprite) return;
+  sprite.classList.add('walking');
+  setTimeout(() => sprite.classList.remove('walking'), 800);
+}
+
 function openChat(key) {
   const agent = agents[key];
   currentAgent = key;
@@ -628,6 +691,10 @@ function openChat(key) {
   // Update context bar
   updateContextBar();
 
+  // Agent walks toward user
+  walkAgentToUser(key);
+  setAgentState(key, 'busy');
+
   panel.classList.add('open');
   showNotification(`${agent.emoji} ${agent.name} CONECTADO`, agent.color);
   spawnParticles(agent.color);
@@ -641,7 +708,10 @@ function quickSend(btn) {
 }
 
 function closeChat() {
-  if (currentAgent) domCache[currentAgent] = document.getElementById('chat-messages').innerHTML;
+  if (currentAgent) {
+    domCache[currentAgent] = document.getElementById('chat-messages').innerHTML;
+    setAgentState(currentAgent, 'available');
+  }
   document.getElementById('chat-panel').classList.remove('open');
   currentAgent = null;
 }
@@ -701,6 +771,7 @@ async function sendMessage() {
   addMessage('user', text);
   isLoading = true;
   document.getElementById('send-btn').disabled = true;
+  setAgentState(currentAgent, 'thinking');
   showTyping();
 
   chatHistory[currentAgent].push({ role: 'user', content: text });
@@ -732,6 +803,7 @@ async function sendMessage() {
     chatHistory[currentAgent].push({ role: 'assistant', content: reply });
     addToContext('user', text, agents[currentAgent].name);
     addToContext('agent', reply, agents[currentAgent].name);
+    setAgentState(currentAgent, 'busy');
     hideTyping();
     addMessage('agent', reply);
 
