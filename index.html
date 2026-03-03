@@ -853,7 +853,7 @@ document.addEventListener('keydown', e => {
 // ============================================================
 const SUPABASE_URL = 'https://hmvduevkpgvkihqfwxnl.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jicNZ2mxc5fjicKNKDZrAA_oMU2oNLJ';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let authMode = 'login';
 
@@ -882,9 +882,9 @@ async function handleAuth() {
   try {
     let result;
     if (authMode === 'login') {
-      result = await supabase.auth.signInWithPassword({ email, password });
+      result = await sbClient.auth.signInWithPassword({ email, password });
     } else {
-      result = await supabase.auth.signUp({ email, password });
+      result = await sbClient.auth.signUp({ email, password });
     }
 
     if (result.error) {
@@ -914,7 +914,7 @@ function enterApp(user) {
 }
 
 async function handleLogout() {
-  await supabase.auth.signOut();
+  await sbClient.auth.signOut();
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('user-bar').classList.remove('visible');
   document.getElementById('auth-email').value = '';
@@ -924,14 +924,14 @@ async function handleLogout() {
 }
 
 // Check session on load
-supabase.auth.getSession().then(({ data }) => {
+sbClient.auth.getSession().then(({ data }) => {
   if (data.session) {
     enterApp(data.session.user);
   }
 });
 
 // Listen for auth changes
-supabase.auth.onAuthStateChange((event, session) => {
+sbClient.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_IN' && session) enterApp(session.user);
   if (event === 'SIGNED_OUT') {
     document.getElementById('auth-screen').style.display = 'flex';
