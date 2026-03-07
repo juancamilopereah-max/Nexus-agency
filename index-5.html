@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS AGENCY — Agencia Virtual</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --neon-cyan: #00ffff;
+  --neon-purple: #bf00ff;
+  --neon-green: #00ff88;
+  --neon-orange: #ff6b00;
+  --neon-yellow: #ffff00;
+  --text: #e0e0ff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; image-rendering: pixelated; }
+
+body {
+  background: var(--bg);
+  font-family: 'VT323', monospace;
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+#starfield { position: fixed; inset: 0; z-index: 0; background: radial-gradient(ellipse at 50% 30%, #0d0030 0%, #000005 60%); }
+.star { position: absolute; background: white; animation: twinkle 2s infinite alternate; }
+@keyframes twinkle { from { opacity: 0.2; } to { opacity: 1; } }
+
+#scanlines {
+  position: fixed; inset: 0; z-index: 1;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px);
+  pointer-events: none;
+}
+
+#header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 52px;
+  background: rgba(0,0,0,0.9);
+  border-bottom: 2px solid var(--neon-cyan);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: 0 0 20px rgba(0,255,255,0.3);
+}
+
+#logo {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px var(--neon-cyan);
+  animation: logoGlow 2s infinite alternate;
+}
+@keyframes logoGlow {
+  from { text-shadow: 0 0 10px var(--neon-cyan); }
+  to { text-shadow: 0 0 30px var(--neon-cyan), 0 0 60px rgba(0,255,255,0.4); }
+}
+
+#status-bar { font-size: 14px; color: var(--neon-green); display: flex; gap: 20px; }
+.status-dot { display: inline-block; width: 8px; height: 8px; background: var(--neon-green); margin-right: 4px; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+#clock { color: var(--neon-yellow); font-size: 16px; }
+
+#world {
+  position: fixed; inset: 52px 0 32px 0; z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 20%, #12082a 0%, #050510 100%);
+  transition: background 4s ease;
+}
+@keyframes ambientPulse { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
+#ambient-light {
+  position:absolute; inset:0; pointer-events:none; z-index:1;
+  background: radial-gradient(ellipse at 50% 10%, rgba(100,0,255,0.06) 0%, transparent 60%);
+  animation: ambientPulse 10s infinite ease-in-out;
+}
+
+#isometric-scene { position: relative; width: 900px; height: 560px; z-index: 2; }
+
+.room { position: absolute; cursor: pointer; transition: filter 0.2s; }
+.room:hover { filter: brightness(1.35); }
+.room:hover .room-label { opacity: 1; transform: translateX(-50%) translateY(-5px); }
+
+.room-glow {
+  position: absolute; border-radius: 50%;
+  filter: blur(30px); opacity: 0.35; pointer-events: none;
+  animation: roomPulse 3s infinite alternate;
+}
+@keyframes roomPulse { from { opacity: 0.25; transform: scale(0.9); } to { opacity: 0.55; transform: scale(1.1); } }
+
+/* ═══ AGENT SPRITES — ENHANCED ═══ */
+.agent-sprite {
+  position: absolute; width: 48px; height: 72px;
+  animation: agentBob 2s infinite alternate ease-in-out;
+  cursor: pointer; z-index: 20; filter: drop-shadow(0 0 8px currentColor);
+}
+@keyframes agentBob { from { transform: translateY(0px); } to { transform: translateY(-8px); } }
+@keyframes agentThink {
+  0%,100% { transform: translateY(0) rotate(-4deg) scale(1); }
+  50% { transform: translateY(-12px) rotate(4deg) scale(1.05); }
+}
+@keyframes agentWalk {
+  0% { transform: translateX(0) scaleX(1); }
+  25% { transform: translateX(10px) translateY(-3px) scaleX(1); }
+  50% { transform: translateX(20px) scaleX(1); }
+  75% { transform: translateX(10px) translateY(-3px) scaleX(1); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+@keyframes agentClick {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3) translateY(-10px); }
+  60% { transform: scale(0.9) translateY(0); }
+  100% { transform: scale(1); }
+}
+@keyframes statusPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes eyeBlink { 0%,88%,100% { transform: scaleY(1); } 92%,96% { transform: scaleY(0.05); } }
+@keyframes particleFloat {
+  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0.8; }
+  100% { transform: translateY(-40px) translateX(var(--dx,10px)) scale(0); opacity: 0; }
+}
+@keyframes auraGlow {
+  0%,100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+}
+@keyframes roomFlash {
+  0% { opacity: 0; } 20% { opacity: 0.6; } 100% { opacity: 0; }
+}
+@keyframes worldActivity {
+  0%,100% { opacity: 0.6; } 50% { opacity: 1; }
+}
+
+.agent-sprite.thinking { animation: agentThink 0.7s infinite ease-in-out !important; }
+.agent-sprite.walking { animation: agentWalk 0.5s 1 linear !important; }
+.agent-sprite.clicked { animation: agentClick 0.5s 1 ease-out !important; }
+
+/* Sprite parts — bigger */
+.sprite-head { width: 28px; height: 28px; position: absolute; left: 10px; top: 0; border-radius: 4px; }
+.sprite-body { width: 32px; height: 22px; position: absolute; left: 8px; top: 26px; border-radius: 3px; }
+.sprite-arm-l { width: 8px; height: 18px; position: absolute; left: 1px; top: 28px; border-radius: 3px; }
+.sprite-arm-r { width: 8px; height: 18px; position: absolute; right: 1px; top: 28px; border-radius: 3px; }
+.sprite-leg-l { width: 12px; height: 18px; position: absolute; left: 9px; top: 48px; border-radius: 2px; }
+.sprite-leg-r { width: 12px; height: 18px; position: absolute; right: 9px; top: 48px; border-radius: 2px; }
+.sprite-eye-l, .sprite-eye-r {
+  position: absolute; width: 6px; height: 6px;
+  background: #000; top: 9px; border-radius: 1px;
+  animation: eyeBlink 5s infinite;
+}
+.sprite-eye-l { left: 5px; } .sprite-eye-r { right: 5px; }
+.sprite-accessory { position: absolute; font-size: 10px; top: -4px; left: 50%; transform: translateX(-50%); }
+
+/* Halo / shadow */
+.agent-halo {
+  position: absolute; width: 50px; height: 14px;
+  bottom: -6px; left: -1px; border-radius: 50%;
+  filter: blur(8px); opacity: 0.6;
+  animation: auraGlow 2s infinite ease-in-out;
+}
+
+/* Aura ring */
+.agent-aura {
+  position: absolute; width: 64px; height: 64px;
+  border-radius: 50%; border: 2px solid;
+  top: -8px; left: -8px; opacity: 0;
+  animation: auraGlow 3s infinite ease-in-out;
+  pointer-events: none;
+}
+
+/* Status badge */
+.agent-status {
+  position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+  font-family: 'VT323', monospace; font-size: 13px; white-space: nowrap;
+  padding: 3px 8px; border: 1px solid; letter-spacing: 1px;
+}
+.status-available { color: #00ff88; border-color: #00ff88; background: rgba(0,255,136,0.08); }
+.status-busy { color: #ffaa00; border-color: #ffaa00; background: rgba(255,170,0,0.08); animation: statusPulse 1.5s infinite; }
+.status-thinking { color: #00ffff; border-color: #00ffff; background: rgba(0,255,255,0.1); animation: statusPulse 0.4s infinite; }
+
+/* Thought bubble */
+.thought-bubble {
+  position: absolute; top: -36px; left: 50%; transform: translateX(-50%);
+  font-family: 'VT323', monospace; font-size: 14px; color: #fff;
+  background: rgba(5,5,20,0.92); border: 1px solid rgba(255,255,255,0.15);
+  padding: 4px 10px; white-space: nowrap; opacity: 0;
+  transition: opacity 0.25s; pointer-events: none;
+  box-shadow: 0 0 12px rgba(255,255,255,0.08);
+}
+.thought-bubble::after {
+  content: ''; position: absolute; bottom: -6px; left: 50%;
+  transform: translateX(-50%); width: 6px; height: 6px;
+  background: rgba(5,5,20,0.92); border-right: 1px solid rgba(255,255,255,0.15);
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  transform: translateX(-50%) rotate(45deg);
+}
+.agent-sprite:hover .thought-bubble { opacity: 1; }
+
+/* Room flash overlay */
+.room-flash {
+  position: absolute; inset: 0; pointer-events: none;
+  background: white; opacity: 0; border-radius: 2px;
+  animation: none;
+}
+.room-flash.active { animation: roomFlash 0.5s ease-out forwards; }
+
+/* Floating particles */
+.particle {
+  position: absolute; width: 4px; height: 4px; border-radius: 50%;
+  pointer-events: none; animation: particleFloat 1.2s ease-out forwards;
+}
+
+.room-label {
+  position: absolute; font-family: 'Press Start 2P', monospace; font-size: 7px;
+  padding: 4px 8px; border: 1px solid; background: rgba(0,0,0,0.85);
+  white-space: nowrap; opacity: 0.6; transition: all 0.3s; pointer-events: none;
+  z-index: 30; text-align: center; top: -30px; left: 50%; transform: translateX(-50%);
+}
+
+/* CHAT PANEL */
+#chat-panel {
+  position: fixed; right: -420px; top: 52px; bottom: 32px; width: 400px;
+  background: rgba(5,5,20,0.97); border-left: 2px solid var(--neon-cyan);
+  z-index: 200; display: flex; flex-direction: column;
+  transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(10px);
+}
+#chat-panel.open { right: 0; }
+
+#chat-header {
+  padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; gap: 12px;
+}
+#agent-avatar {
+  width: 40px; height: 40px; border-radius: 4px; border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+#agent-info { flex: 1; }
+#agent-name { font-family: 'Press Start 2P', monospace; font-size: 9px; margin-bottom: 4px; }
+#agent-dept { font-size: 14px; opacity: 0.6; }
+#close-chat { background: none; border: none; color: #ff4444; font-size: 24px; cursor: pointer; font-family: 'VT323', monospace; padding: 4px 8px; }
+#close-chat:hover { text-shadow: 0 0 10px #ff4444; }
+
+#chat-messages {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  scrollbar-width: thin; scrollbar-color: rgba(0,255,255,0.3) transparent;
+}
+
+.msg { display: flex; gap: 8px; align-items: flex-start; animation: msgIn 0.3s ease-out; }
+@keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.msg-bubble {
+  padding: 10px 14px; border-radius: 2px; font-size: 16px;
+  line-height: 1.5; max-width: 85%; border: 1px solid rgba(255,255,255,0.1);
+}
+.msg.agent .msg-bubble { background: rgba(0,0,0,0.6); border-left: 3px solid; }
+.msg.user { flex-direction: row-reverse; }
+.msg.user .msg-bubble { background: rgba(20,20,40,0.8); border-right: 3px solid var(--neon-cyan); color: var(--neon-cyan); text-align: right; }
+
+.msg-avatar {
+  width: 28px; height: 28px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+}
+
+.typing-indicator { display: flex; gap: 4px; padding: 12px 14px; background: rgba(0,0,0,0.6); border-radius: 2px; width: fit-content; }
+.typing-dot { width: 6px; height: 6px; border-radius: 50%; animation: typingBounce 0.8s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+#chat-input-area { padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 8px; }
+#input-row { display: flex; gap: 8px; }
+#notion-row { display: flex; gap: 8px; align-items: center; }
+#notion-btn { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.45); font-family: 'VT323', monospace; font-size: 15px; cursor: pointer; border-radius: 2px; transition: all 0.2s; }
+#notion-btn:hover { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.07); }
+#notion-btn.on { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.1); }
+#notion-status { font-family: 'VT323', monospace; font-size: 14px; color: rgba(255,255,255,0.25); }
+#notion-status.ok { color: #00ff88; }
+#notion-status.err { color: #ff4444; }
+#quick-actions { padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 6px; flex-wrap: wrap; background: rgba(255,255,255,0.02); }
+.qa-btn { padding: 4px 10px; font-family: 'VT323', monospace; font-size: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.55); cursor: pointer; border-radius: 2px; transition: all 0.15s; }
+.qa-btn:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
+#context-bar { padding: 6px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); display: none; }
+#context-bar.visible { display: flex; align-items: center; gap: 8px; }
+#context-text { font-family: 'VT323', monospace; font-size: 13px; color: rgba(255,255,255,0.3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#context-clear { font-family: 'VT323', monospace; font-size: 12px; color: rgba(255,0,0,0.4); cursor: pointer; background: none; border: none; padding: 0; }
+#context-clear:hover { color: #ff4444; }
+#gen-doc-btn { width: 100%; padding: 8px; border: 1px dashed rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); font-family: 'VT323', monospace; font-size: 15px; cursor: pointer; border-radius: 2px; transition: all 0.2s; margin-top: 4px; }
+#gen-doc-btn:hover { border-color: #00ccff; color: #00ccff; background: rgba(0,204,255,0.06); }
+#chat-input {
+  flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.3);
+  color: var(--text); font-family: 'VT323', monospace; font-size: 18px;
+  padding: 10px 12px; outline: none; border-radius: 2px; transition: border-color 0.2s, box-shadow 0.2s;
+}
+#chat-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0,255,255,0.2); }
+#chat-input::placeholder { color: rgba(255,255,255,0.3); }
+#send-btn {
+  padding: 10px 16px; border: none; font-family: 'Press Start 2P', monospace;
+  font-size: 8px; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+  background: var(--neon-cyan); color: #000;
+}
+#send-btn:hover { box-shadow: 0 0 15px var(--neon-cyan); transform: scale(1.05); }
+#send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* INTRO */
+#intro {
+  position: fixed; inset: 0; z-index: 500; background: #000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+}
+#intro-logo {
+  font-family: 'Press Start 2P', monospace; font-size: clamp(16px,3vw,28px);
+  color: var(--neon-cyan); text-shadow: 0 0 30px var(--neon-cyan);
+  text-align: center; animation: logoGlow 1s infinite alternate; line-height: 1.8;
+}
+#intro-sub { font-size: 22px; color: rgba(255,255,255,0.5); text-align: center; }
+#intro-bar-wrap { width: 280px; height: 8px; border: 1px solid var(--neon-cyan); background: rgba(0,255,255,0.05); }
+#intro-bar { height: 100%; background: var(--neon-cyan); width: 0%; transition: width 0.05s linear; box-shadow: 0 0 10px var(--neon-cyan); }
+#intro-text { font-size: 16px; color: var(--neon-green); }
+
+#bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; height: 32px;
+  background: rgba(0,0,0,0.9); border-top: 1px solid rgba(0,255,255,0.2);
+  display: flex; align-items: center; padding: 0 16px; overflow: hidden;
+  font-size: 13px; color: rgba(255,255,255,0.4);
+}
+#ticker-content { animation: ticker 30s linear infinite; white-space: nowrap; }
+@keyframes ticker { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
+
+#notification {
+  position: fixed; top: 70px; left: 50%;
+  transform: translateX(-50%) translateY(-100px); z-index: 400;
+  background: rgba(0,0,0,0.95); border: 1px solid var(--neon-green);
+  padding: 10px 20px; font-family: 'Press Start 2P', monospace; font-size: 8px;
+  color: var(--neon-green); transition: transform 0.4s ease-out;
+  text-shadow: 0 0 10px var(--neon-green); white-space: nowrap;
+}
+#notification.show { transform: translateX(-50%) translateY(0); }
+
+.particle {
+  position: fixed; pointer-events: none; font-family: 'VT323', monospace;
+  font-size: 12px; animation: floatUp 3s linear forwards; z-index: 50;
+}
+@keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
+
+/* AUTH SCREEN */
+#auth-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #08080f;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 0;
+}
+#auth-box {
+  width: 380px; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(0,255,255,0.2);
+  padding: 40px 36px; display: flex; flex-direction: column; gap: 20px;
+  box-shadow: 0 0 40px rgba(0,255,255,0.08);
+}
+#auth-logo {
+  font-family: 'Press Start 2P', monospace; font-size: 13px;
+  color: var(--neon-cyan); text-align: center; line-height: 1.8;
+  text-shadow: 0 0 20px var(--neon-cyan); margin-bottom: 8px;
+}
+#auth-sub { font-size: 16px; color: rgba(255,255,255,0.35); text-align: center; letter-spacing: 2px; }
+#auth-tabs { display: flex; gap: 0; border: 1px solid rgba(255,255,255,0.1); }
+.auth-tab {
+  flex: 1; padding: 10px; font-family: 'Press Start 2P', monospace; font-size: 7px;
+  background: none; border: none; color: rgba(255,255,255,0.35); cursor: pointer;
+  transition: all 0.2s;
+}
+.auth-tab.active { background: rgba(0,255,255,0.1); color: var(--neon-cyan); }
+#auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-input {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: #fff; font-family: 'VT323', monospace; font-size: 18px;
+  padding: 12px 14px; outline: none; transition: border-color 0.2s;
+}
+.auth-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0,255,255,0.15); }
+.auth-input::placeholder { color: rgba(255,255,255,0.25); }
+#auth-btn {
+  padding: 14px; font-family: 'Press Start 2P', monospace; font-size: 8px;
+  background: var(--neon-cyan); color: #000; border: none; cursor: pointer;
+  transition: all 0.2s; margin-top: 4px;
+}
+#auth-btn:hover { box-shadow: 0 0 20px rgba(0,255,255,0.5); transform: scale(1.02); }
+#auth-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+#auth-msg { font-size: 15px; text-align: center; min-height: 20px; }
+#auth-msg.ok { color: var(--neon-green); }
+#auth-msg.err { color: #ff4444; }
+#user-bar {
+  position: fixed; top: 0; right: 0; z-index: 500;
+  display: none; align-items: center; gap: 12px;
+  padding: 8px 16px; background: rgba(0,0,0,0.8);
+  border-bottom: 1px solid rgba(0,255,255,0.1);
+  border-left: 1px solid rgba(0,255,255,0.1);
+}
+#user-bar.visible { display: flex; }
+#user-email { font-family: 'VT323', monospace; font-size: 15px; color: rgba(255,255,255,0.4); }
+#logout-btn {
+  font-family: 'Press Start 2P', monospace; font-size: 6px;
+  background: none; border: 1px solid rgba(255,0,0,0.3); color: #ff4444;
+  padding: 5px 8px; cursor: pointer; transition: all 0.2s;
+}
+#logout-btn:hover { background: rgba(255,0,0,0.1); border-color: #ff4444; }
+
+/* SITTING AGENTS */
+.agent-sitting {
+  position: absolute; width: 180px; height: 270px;
+  cursor: pointer; z-index: 20;
+  transition: opacity 0.3s ease;
+}
+.agent-standing-img {
+  width: 120px; height: 180px;
+  image-rendering: pixelated;
+  transition: opacity 0.3s ease;
+}
+@keyframes typing {
+  0%,100% { transform: translateY(0px) rotate(-1deg); }
+  25% { transform: translateY(-3px) rotate(1deg); }
+  50% { transform: translateY(-1px) rotate(-0.5deg); }
+  75% { transform: translateY(-4px) rotate(0.5deg); }
+}
+@keyframes monitorBlink {
+  0%,95%,100% { filter: brightness(1) drop-shadow(0 0 6px currentColor); }
+  97% { filter: brightness(1.4) drop-shadow(0 0 15px currentColor); }
+}
+@keyframes sittingBob {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.agent-sitting { animation: sittingBob 3s infinite ease-in-out; }
+.agent-sitting.typing-active { animation: typing 0.3s infinite ease-in-out; }
+.agent-sitting img {
+  width: 100%; height: 100%;
+  image-rendering: pixelated;
+}
+</style>
+</head>
+<body>
+
+<div id="intro">
+  <div id="intro-logo">NEXUS<br>AGENCY</div>
+  <div id="intro-sub">Agencia Virtual Inmersiva v0.1</div>
+  <div id="intro-bar-wrap"><div id="intro-bar"></div></div>
+  <div id="intro-text">CARGANDO SISTEMAS...</div>
+</div>
+
+<div id="starfield"></div>
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div id="auth-box">
+    <div id="auth-logo">NEXUS<br>AGENCY</div>
+    <div id="auth-sub">ACCESO PRIVADO</div>
+    <div id="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">INICIAR SESIÓN</button>
+      <button class="auth-tab" onclick="switchTab('signup')">REGISTRARSE</button>
+    </div>
+    <div id="auth-form">
+      <input class="auth-input" type="email" id="auth-email" placeholder="tu@email.com"/>
+      <input class="auth-input" type="password" id="auth-password" placeholder="Contraseña"/>
+      <button id="auth-btn" onclick="handleAuth()">ENTRAR</button>
+      <div id="auth-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- USER BAR -->
+<div id="user-bar">
+  <span id="user-email">usuario@email.com</span>
+  <button id="logout-btn" onclick="handleLogout()">SALIR</button>
+</div>
+
+<div id="scanlines"></div>
+
+<div id="header">
+  <div id="logo">⬡ NEXUS AGENCY</div>
+  <div id="status-bar">
+    <span><span class="status-dot"></span>4 AGENTES ACTIVOS</span>
+    <span><span class="status-dot" style="background:var(--neon-purple);animation-delay:0.3s"></span>SISTEMA EN LÍNEA</span>
+  </div>
+  <div id="clock">00:00:00</div>
+</div>
+
+<div id="world">
+  <div id="ambient-light"></div>
+  <div id="isometric-scene">
+
+    <!-- ESTRATEGIA -->
+    <div class="room" id="room-strategy" style="left:60px;top:40px;" onclick="openChat('strategy')">
+      <div class="room-glow" style="width:200px;height:100px;background:var(--neon-purple);left:-20px;top:20px;"></div>
+      <svg width="220" height="190" style="overflow:visible;">
+        <polygon points="110,10 220,65 110,120 0,65" fill="#1a1040" stroke="#bf00ff" stroke-width="1.5"/>
+        <polygon points="0,65 110,120 110,190 0,135" fill="#0d0820" stroke="#bf00ff" stroke-width="1.5"/>
+        <polygon points="220,65 110,120 110,190 220,135" fill="#110a2a" stroke="#bf00ff" stroke-width="1.5"/>
+        <line x1="55" y1="37" x2="165" y2="92" stroke="rgba(191,0,255,0.2)" stroke-width="1"/>
+        <line x1="110" y1="10" x2="110" y2="120" stroke="rgba(191,0,255,0.2)" stroke-width="1"/>
+        <rect x="20" y="85" width="36" height="28" fill="#0a0520" stroke="#bf00ff" stroke-width="1"/>
+        <line x1="38" y1="85" x2="38" y2="113" stroke="#bf00ff" stroke-width="0.5" opacity="0.5"/>
+        <line x1="20" y1="99" x2="56" y2="99" stroke="#bf00ff" stroke-width="0.5" opacity="0.5"/>
+        <rect x="22" y="87" width="14" height="10" fill="rgba(191,0,255,0.2)"/>
+        <rect x="40" y="87" width="14" height="10" fill="rgba(191,0,255,0.1)"/>
+        <rect x="135" y="88" width="60" height="20" fill="#0a0520" stroke="#bf00ff" stroke-width="1"/>
+        <text x="165" y="101" text-anchor="middle" font-family="VT323" font-size="9" fill="#bf00ff">ESTRATEGIA</text>
+        <polyline points="4,67 110,14 216,67" fill="none" stroke="#bf00ff" stroke-width="2" opacity="0.8"/>
+      </svg>
+      <div class="agent-sprite" id="sprite-strategy" style="left:85px;top:45px;color:#bf00ff;">
+        <div class="agent-aura" style="border-color:#bf00ff;opacity:0.2;"></div>
+        <div class="sprite-accessory">🎩</div>
+        <div class="sprite-head" style="background:#7700cc;border:2px solid #bf00ff;box-shadow:0 0 10px #bf00ff44;">
+          <div class="sprite-eye-l"></div><div class="sprite-eye-r"></div>
+        </div>
+        <div class="sprite-arm-l" style="background:#5500aa;border:1px solid #7700cc;transform:rotate(15deg);"></div>
+        <div class="sprite-arm-r" style="background:#5500aa;border:1px solid #7700cc;transform:rotate(-15deg);"></div>
+        <div class="sprite-body" style="background:#5500aa;border:2px solid #7700cc;box-shadow:inset 0 0 8px #bf00ff22;"></div>
+        <div class="sprite-leg-l" style="background:#440088;border:1px solid #7700cc;"></div>
+        <div class="sprite-leg-r" style="background:#440088;border:1px solid #7700cc;"></div>
+        <div class="agent-halo" style="background:var(--neon-purple);"></div>
+        <div class="thought-bubble">🧠 Listo para planificar</div>
+        <div class="agent-status status-available" id="status-strategy">● DISPONIBLE</div>
+      </div>
+      <div class="room-label" style="color:var(--neon-purple);border-color:var(--neon-purple);">🧠 ESTRATEGIA</div>
+    </div>
+
+    <!-- CONTENIDO -->
+    <div class="room" id="room-content" style="left:420px;top:40px;" onclick="openChat('content')">
+      <div class="room-glow" style="width:200px;height:100px;background:var(--neon-orange);left:-20px;top:20px;"></div>
+      <svg width="220" height="190" style="overflow:visible;">
+        <polygon points="110,10 220,65 110,120 0,65" fill="#201000" stroke="#ff6b00" stroke-width="1.5"/>
+        <polygon points="0,65 110,120 110,190 0,135" fill="#120800" stroke="#ff6b00" stroke-width="1.5"/>
+        <polygon points="220,65 110,120 110,190 220,135" fill="#150a00" stroke="#ff6b00" stroke-width="1.5"/>
+        <line x1="55" y1="37" x2="165" y2="92" stroke="rgba(255,107,0,0.2)" stroke-width="1"/>
+        <line x1="110" y1="10" x2="110" y2="120" stroke="rgba(255,107,0,0.2)" stroke-width="1"/>
+        <rect x="18" y="82" width="44" height="34" rx="2" fill="#0a0500" stroke="#ff6b00" stroke-width="1"/>
+        <rect x="24" y="87" width="20" height="20" rx="10" fill="none" stroke="#ff6b00" stroke-width="1.5"/>
+        <circle cx="34" cy="97" r="5" fill="#ff6b00" opacity="0.3"/>
+        <rect x="48" y="88" width="10" height="6" fill="#ff6b00" opacity="0.6"/>
+        <rect x="135" y="88" width="60" height="20" fill="#0a0500" stroke="#ff6b00" stroke-width="1"/>
+        <text x="165" y="101" text-anchor="middle" font-family="VT323" font-size="9" fill="#ff6b00">CONTENIDO</text>
+        <polyline points="4,67 110,14 216,67" fill="none" stroke="#ff6b00" stroke-width="2" opacity="0.8"/>
+      </svg>
+      <div class="agent-sprite" id="sprite-content" style="left:85px;top:45px;color:#ff6b00;">
+        <div class="agent-aura" style="border-color:#ff6b00;opacity:0.2;"></div>
+        <div class="sprite-accessory">🎬</div>
+        <div class="sprite-head" style="background:#cc4400;border:2px solid #ff6b00;box-shadow:0 0 10px #ff6b0044;">
+          <div class="sprite-eye-l"></div><div class="sprite-eye-r"></div>
+        </div>
+        <div class="sprite-arm-l" style="background:#aa3300;border:1px solid #cc4400;transform:rotate(15deg);"></div>
+        <div class="sprite-arm-r" style="background:#aa3300;border:1px solid #cc4400;transform:rotate(-15deg);"></div>
+        <div class="sprite-body" style="background:#aa3300;border:2px solid #cc4400;box-shadow:inset 0 0 8px #ff6b0022;"></div>
+        <div class="sprite-leg-l" style="background:#882200;border:1px solid #cc4400;"></div>
+        <div class="sprite-leg-r" style="background:#882200;border:1px solid #cc4400;"></div>
+        <div class="agent-halo" style="background:var(--neon-orange);"></div>
+        <div class="thought-bubble">🎬 Listo para crear</div>
+        <div class="agent-status status-available" id="status-content">● DISPONIBLE</div>
+      </div>
+      <div class="room-label" style="color:var(--neon-orange);border-color:var(--neon-orange);">🎬 CONTENIDO</div>
+    </div>
+
+    <!-- VENTAS -->
+    <div class="room" id="room-sales" style="left:60px;top:290px;" onclick="openChat('sales')">
+      <div class="room-glow" style="width:200px;height:100px;background:var(--neon-green);left:-20px;top:20px;"></div>
+      <svg width="220" height="190" style="overflow:visible;">
+        <polygon points="110,10 220,65 110,120 0,65" fill="#001a0e" stroke="#00ff88" stroke-width="1.5"/>
+        <polygon points="0,65 110,120 110,190 0,135" fill="#000e08" stroke="#00ff88" stroke-width="1.5"/>
+        <polygon points="220,65 110,120 110,190 220,135" fill="#001208" stroke="#00ff88" stroke-width="1.5"/>
+        <line x1="55" y1="37" x2="165" y2="92" stroke="rgba(0,255,136,0.2)" stroke-width="1"/>
+        <line x1="110" y1="10" x2="110" y2="120" stroke="rgba(0,255,136,0.2)" stroke-width="1"/>
+        <rect x="16" y="105" width="7" height="20" fill="#00ff88" opacity="0.7"/>
+        <rect x="26" y="99" width="7" height="26" fill="#00ff88" opacity="0.8"/>
+        <rect x="36" y="93" width="7" height="32" fill="#00ff88"/>
+        <rect x="135" y="88" width="60" height="20" fill="#000e08" stroke="#00ff88" stroke-width="1"/>
+        <text x="165" y="101" text-anchor="middle" font-family="VT323" font-size="9" fill="#00ff88">VENTAS</text>
+        <polyline points="4,67 110,14 216,67" fill="none" stroke="#00ff88" stroke-width="2" opacity="0.8"/>
+      </svg>
+      <div class="agent-sprite" id="sprite-sales" style="left:85px;top:45px;color:#00ff88;">
+        <div class="agent-aura" style="border-color:#00ff88;opacity:0.2;"></div>
+        <div class="sprite-accessory">💼</div>
+        <div class="sprite-head" style="background:#006633;border:2px solid #00ff88;box-shadow:0 0 10px #00ff8844;">
+          <div class="sprite-eye-l"></div><div class="sprite-eye-r"></div>
+        </div>
+        <div class="sprite-arm-l" style="background:#005522;border:1px solid #006633;transform:rotate(15deg);"></div>
+        <div class="sprite-arm-r" style="background:#005522;border:1px solid #006633;transform:rotate(-15deg);"></div>
+        <div class="sprite-body" style="background:#005522;border:2px solid #006633;box-shadow:inset 0 0 8px #00ff8822;"></div>
+        <div class="sprite-leg-l" style="background:#004411;border:1px solid #006633;"></div>
+        <div class="sprite-leg-r" style="background:#004411;border:1px solid #006633;"></div>
+        <div class="agent-halo" style="background:var(--neon-green);"></div>
+        <div class="thought-bubble">💹 Listo para vender</div>
+        <div class="agent-status status-available" id="status-sales">● DISPONIBLE</div>
+      </div>
+      <div class="room-label" style="color:var(--neon-green);border-color:var(--neon-green);">💹 VENTAS</div>
+    </div>
+
+    <!-- ANÁLISIS -->
+    <div class="room" id="room-analysis" style="left:420px;top:290px;" onclick="openChat('analysis')">
+      <div class="room-glow" style="width:200px;height:100px;background:var(--neon-cyan);left:-20px;top:20px;"></div>
+      <svg width="220" height="190" style="overflow:visible;">
+        <polygon points="110,10 220,65 110,120 0,65" fill="#001a1a" stroke="#00ffff" stroke-width="1.5"/>
+        <polygon points="0,65 110,120 110,190 0,135" fill="#000e0e" stroke="#00ffff" stroke-width="1.5"/>
+        <polygon points="220,65 110,120 110,190 220,135" fill="#001212" stroke="#00ffff" stroke-width="1.5"/>
+        <line x1="55" y1="37" x2="165" y2="92" stroke="rgba(0,255,255,0.2)" stroke-width="1"/>
+        <line x1="110" y1="10" x2="110" y2="120" stroke="rgba(0,255,255,0.2)" stroke-width="1"/>
+        <circle cx="34" cy="98" r="16" fill="none" stroke="#00ffff" stroke-width="1.5"/>
+        <path d="M34,98 L34,82 A16,16 0 0,1 50,98Z" fill="rgba(0,255,255,0.3)"/>
+        <path d="M34,98 L50,98 A16,16 0 0,1 20,110Z" fill="rgba(0,255,255,0.15)"/>
+        <rect x="135" y="88" width="60" height="20" fill="#001a1a" stroke="#00ffff" stroke-width="1"/>
+        <text x="165" y="101" text-anchor="middle" font-family="VT323" font-size="9" fill="#00ffff">ANÁLISIS</text>
+        <polyline points="4,67 110,14 216,67" fill="none" stroke="#00ffff" stroke-width="2" opacity="0.8"/>
+      </svg>
+      <div class="agent-sprite" id="sprite-analysis" style="left:85px;top:45px;color:#00ffff;">
+        <div class="agent-aura" style="border-color:#00ffff;opacity:0.2;"></div>
+        <div class="sprite-accessory">🔬</div>
+        <div class="sprite-head" style="background:#005555;border:2px solid #00ffff;box-shadow:0 0 10px #00ffff44;">
+          <div class="sprite-eye-l"></div><div class="sprite-eye-r"></div>
+        </div>
+        <div class="sprite-arm-l" style="background:#004444;border:1px solid #005555;transform:rotate(15deg);"></div>
+        <div class="sprite-arm-r" style="background:#004444;border:1px solid #005555;transform:rotate(-15deg);"></div>
+        <div class="sprite-body" style="background:#004444;border:2px solid #005555;box-shadow:inset 0 0 8px #00ffff22;"></div>
+        <div class="sprite-leg-l" style="background:#003333;border:1px solid #005555;"></div>
+        <div class="sprite-leg-r" style="background:#003333;border:1px solid #005555;"></div>
+        <div class="agent-halo" style="background:var(--neon-cyan);"></div>
+        <div class="thought-bubble">📊 Listo para analizar</div>
+        <div class="agent-status status-available" id="status-analysis">● DISPONIBLE</div>
+      </div>
+      <div class="room-label" style="color:var(--neon-cyan);border-color:var(--neon-cyan);">📊 ANÁLISIS</div>
+    </div>
+
+    <!-- Connection lines -->
+    <svg style="position:absolute;inset:0;pointer-events:none;z-index:5;" width="900" height="560">
+      <line x1="280" y1="175" x2="420" y2="175" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="170" y1="240" x2="170" y2="325" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="530" y1="240" x2="530" y2="325" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="280" y1="415" x2="420" y2="415" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="4,4"/>
+      <circle cx="350" cy="295" r="4" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+      <circle cx="350" cy="295" r="2" fill="rgba(255,255,255,0.2)"/>
+    </svg>
+
+  </div>
+</div>
+
+<!-- CHAT PANEL -->
+<div id="chat-panel">
+  <div id="chat-header">
+    <div id="agent-avatar">🧠</div>
+    <div id="agent-info">
+      <div id="agent-name">NEXUS-S</div>
+      <div id="agent-dept">Sala de Estrategia</div>
+    </div>
+    <button id="close-chat" onclick="closeChat()">✕</button>
+  </div>
+  <div id="context-bar">
+    <span style="font-size:11px;opacity:0.4">🧠</span>
+    <span id="context-text">Sin contexto compartido</span>
+    <button id="context-clear" onclick="clearContext()">✕ limpiar</button>
+  </div>
+  <div id="quick-actions"></div>
+  <div id="chat-messages"></div>
+  <div id="chat-input-area">
+    <div id="input-row">
+      <input type="text" id="chat-input" placeholder="Escribe tu mensaje..." maxlength="500"/>
+      <button id="send-btn" onclick="sendMessage()">ENVIAR</button>
+    </div>
+    <div id="notion-row">
+      <button id="notion-btn" onclick="toggleNotion()">📄 Guardar en Notion</button>
+      <span id="notion-status">Desactivado</span>
+    </div>
+    <button id="gen-doc-btn" onclick="generateDoc()">⚡ Generar documento completo</button>
+  </div>
+</div>
+
+<div id="bottom-bar">
+  <span id="ticker-content">
+    ◈ NEXUS AGENCY v0.2 &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ 4 AGENTES ACTIVOS &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+1 Estrategia &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+2 Contenido &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+3 Ventas &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+4 Análisis &nbsp;&nbsp;|&nbsp;&nbsp; ⌘⇧+C Limpiar memoria &nbsp;&nbsp;|&nbsp;&nbsp; ESC Cerrar sala &nbsp;&nbsp;|&nbsp;&nbsp; ◈ HAZ CLIC EN UNA SALA PARA INTERACTUAR
+  </span>
+</div>
+
+<div id="notification">✔ AGENTE CONECTADO</div>
+
+<script>
+// STARFIELD
+const sf = document.getElementById('starfield');
+for (let i = 0; i < 150; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const sz = Math.random() * 2 + 1;
+  s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${1+Math.random()*3}s`;
+  sf.appendChild(s);
+}
+
+// CLOCK
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0') + ':' +
+    String(now.getSeconds()).padStart(2,'0');
+}
+setInterval(updateClock, 1000); updateClock();
+
+// INTRO
+const introBar = document.getElementById('intro-bar');
+const introText = document.getElementById('intro-text');
+const loadingSteps = ['INICIANDO KERNEL...','CARGANDO AGENTES...','CONSTRUYENDO MUNDO...','CONECTANDO IA...','LISTO.'];
+let progress = 0;
+const introInterval = setInterval(() => {
+  progress += Math.random() * 8 + 3;
+  if (progress >= 100) { progress = 100; clearInterval(introInterval); }
+  introBar.style.width = progress + '%';
+  introText.textContent = loadingSteps[Math.min(Math.floor(progress/25), 4)];
+  if (progress === 100) {
+    setTimeout(() => {
+      document.getElementById('intro').style.transition = 'opacity 0.8s';
+      document.getElementById('intro').style.opacity = '0';
+      setTimeout(() => document.getElementById('intro').remove(), 800);
+    }, 400);
+  }
+}, 60);
+
+// AGENTS
+const agents = {
+  strategy: {
+    name:'NEXUS-S', dept:'Sala de Estrategia', emoji:'🧠', color:'#bf00ff',
+    greeting:'◈ NEXUS-S EN LÍNEA.\n\nSoy tu agente de estrategia. Analizo mercados, defino posicionamiento y estructuro planes de negocio.\n\n¿En qué área estratégica trabajamos hoy?',
+    system:'Eres NEXUS-S, agente de estrategia de NEXUS AGENCY. Personalidad: analítico, directo, con visión clara. Especialidad: estrategia de negocio, posicionamiento, planificación, análisis competitivo, validación de ideas. Responde en español, máximo 180 palabras, sé directo y útil.',
+    quickActions: ['¿Cómo valido mi idea?', 'Crea un plan de 90 días', 'Analiza mi competencia', 'Define mi propuesta de valor', 'Ayúdame a hacer un pitch']
+  },
+  content: {
+    name:'NEXUS-C', dept:'Sala de Contenido', emoji:'🎬', color:'#ff6b00',
+    greeting:'◈ NEXUS-C ACTIVO.\n\nSoy tu agente de contenido. Creo copys, guiones, hooks y narrativas que conectan con audiencias reales.\n\n¿Qué contenido creamos?',
+    system:'Eres NEXUS-C, agente de contenido de NEXUS AGENCY. Personalidad: creativo, energético, instinto narrativo. Especialidad: copywriting, guiones, hooks para redes, storytelling, contenido viral. Responde en español, máximo 180 palabras, da ejemplos concretos.',
+    quickActions: ['Escribe un hook viral', 'Caption para Instagram', 'Guion para video de 60s', 'Ideas de contenido semanal', 'Email de bienvenida']
+  },
+  sales: {
+    name:'NEXUS-V', dept:'Sala de Ventas', emoji:'💹', color:'#00ff88',
+    greeting:'◈ NEXUS-V CONECTADO.\n\nSoy tu agente de ventas. Estructuro propuestas, optimizo funnels y ayudo a cerrar más negocios.\n\n¿Qué quieres vender o mejorar?',
+    system:'Eres NEXUS-V, agente de ventas de NEXUS AGENCY. Personalidad: persuasivo, orientado a resultados. Especialidad: propuestas comerciales, scripts de venta, funnels, pricing, manejo de objeciones. Responde en español, máximo 180 palabras, enfocado en acción.',
+    quickActions: ['Crea una propuesta comercial', 'Script para llamada de ventas', 'Cómo manejar objeciones', 'Define mi pricing', 'Escribe un follow-up']
+  },
+  analysis: {
+    name:'NEXUS-A', dept:'Sala de Análisis', emoji:'📊', color:'#00ffff',
+    greeting:'◈ NEXUS-A INICIALIZADO.\n\nSoy tu agente de análisis. Proceso datos, interpreto métricas e identifico patrones accionables.\n\n¿Qué analizamos?',
+    system:'Eres NEXUS-A, agente analítico de NEXUS AGENCY. Personalidad: metódico, basado en datos, objetivo. Especialidad: métricas, KPIs, benchmarking, insights accionables, reporting. Responde en español, máximo 180 palabras, usa estructura cuando ayude.',
+    quickActions: ['¿Qué KPIs debo medir?', 'Analiza estas métricas', 'Crea un reporte semanal', 'Benchmarking de mi sector', 'Dame insights accionables']
+  }
+};
+
+// SHARED CONTEXT — memoria entre salas
+let sharedContext = [];
+function addToContext(role, text, agentName) {
+  sharedContext.push({ role, text: text.substring(0,150), agentName });
+  if (sharedContext.length > 20) sharedContext.shift();
+  updateContextBar();
+}
+function getContextSummary() {
+  if (sharedContext.length === 0) return '';
+  const lines = sharedContext.slice(-8).map(m => `[${m.agentName}] ${m.role === 'user' ? 'Usuario' : m.agentName}: ${m.text}`);
+  return '\n\nCONTEXTO DE CONVERSACIONES ANTERIORES EN ESTA SESIÓN (úsalo para dar respuestas coherentes):\n' + lines.join('\n');
+}
+function updateContextBar() {
+  const bar = document.getElementById('context-bar');
+  const txt = document.getElementById('context-text');
+  if (sharedContext.length > 0) {
+    bar.classList.add('visible');
+    const last = sharedContext[sharedContext.length-1];
+    txt.textContent = sharedContext.length + ' msgs en memoria · "' + last.text.substring(0,45) + '..."';
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+function clearContext() {
+  sharedContext = [];
+  updateContextBar();
+  showNotification('Contexto limpiado', '#ff4444');
+}
+
+let currentAgent = null;
+let chatHistory = {};
+let domCache = {};
+let isLoading = false;
+
+// AGENT STATE MANAGEMENT
+function setAgentState(key, state) {
+  const room = document.getElementById('room-' + key);
+  if (!room) return;
+  const sprite = document.getElementById('sprite-' + key) || room.querySelector('.agent-sprite');
+  const status = document.getElementById('status-' + key);
+  if (!sprite || !status) return;
+
+  sprite.classList.remove('thinking', 'walking');
+
+  if (state === 'thinking') {
+    sprite.classList.add('thinking');
+    status.className = 'agent-status status-thinking';
+    status.textContent = '◈ PENSANDO...';
+    spawnAgentParticles(key);
+    // Typing animation on sitting img
+
+  } else if (state === 'busy') {
+    status.className = 'agent-status status-busy';
+    status.textContent = '● OCUPADO';
+
+  } else {
+    status.className = 'agent-status status-available';
+    status.textContent = '● DISPONIBLE';
+    sitAgentDown(key);
+  }
+}
+
+function walkAgentToUser(key) {
+  flashRoom(key);
+  const sprite = document.getElementById('sprite-' + key);
+  if (!sprite) return;
+  sprite.classList.add('clicked');
+  setTimeout(() => sprite.classList.remove('clicked'), 500);
+  setTimeout(() => {
+    sprite.classList.add('walking');
+    setTimeout(() => sprite.classList.remove('walking'), 600);
+  }, 100);
+}
+
+function sitAgentDown(key) {
+  // CSS sprites dont have sitting state — just reset animation
+  const sprite = document.getElementById('sprite-' + key);
+  if (sprite) sprite.classList.remove('walking', 'clicked');
+}
+
+function flashRoom(key) {
+  const room = document.getElementById('room-' + key);
+  if (!room) return;
+  let flash = room.querySelector('.room-flash');
+  if (!flash) {
+    flash = document.createElement('div');
+    flash.className = 'room-flash';
+    room.appendChild(flash);
+  }
+  flash.classList.remove('active');
+  void flash.offsetWidth;
+  flash.classList.add('active');
+}
+
+function spawnAgentParticles(key) {
+  const sprite = document.getElementById('sprite-' + key);
+  if (!sprite) return;
+  const colors = { strategy: '#bf00ff', content: '#ff6b00', sales: '#00ff88', analysis: '#00ffff' };
+  const color = colors[key] || '#fff';
+  const room = document.getElementById('room-' + key);
+  if (!room) return;
+
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const dx = (Math.random() - 0.5) * 60;
+      p.style.cssText = `background:${color};left:${100 + Math.random()*20}px;top:${70 + Math.random()*10}px;--dx:${dx}px;box-shadow:0 0 4px ${color};`;
+      room.appendChild(p);
+      setTimeout(() => p.remove(), 1300);
+    }, i * 100);
+  }
+}
+
+// WORLD ACTIVITY — ticker messages that make the world feel alive
+const worldMessages = {
+  strategy: ['🧠 NEXUS-S analizando mercados...', '🧠 NEXUS-S actualizando estrategia...', '🧠 NEXUS-S validando hipótesis...'],
+  content: ['🎬 NEXUS-C generando contenido...', '🎬 NEXUS-C escribiendo hooks...', '🎬 NEXUS-C editando guión...'],
+  sales: ['💹 NEXUS-V procesando pipeline...', '💹 NEXUS-V optimizando funnel...', '💹 NEXUS-V preparando propuesta...'],
+  analysis: ['📊 NEXUS-A procesando datos...', '📊 NEXUS-A calculando métricas...', '📊 NEXUS-A generando reporte...']
+};
+
+function updateWorldTicker() {
+  const keys = ['strategy', 'content', 'sales', 'analysis'];
+  const key = keys[Math.floor(Math.random() * keys.length)];
+  const msgs = worldMessages[key];
+  const msg = msgs[Math.floor(Math.random() * msgs.length)];
+  const ticker = document.getElementById('ticker-content');
+  if (ticker) {
+    const extra = document.createElement('span');
+    extra.textContent = ' &nbsp;|&nbsp; ' + msg;
+    extra.innerHTML = ' &nbsp;&nbsp;|&nbsp;&nbsp; ' + msg;
+    // Just update inline
+  }
+}
+// Run world ticker every 8 seconds
+setInterval(updateWorldTicker, 8000);
+
+function openChat(key) {
+  const agent = agents[key];
+  currentAgent = key;
+
+  const panel = document.getElementById('chat-panel');
+  panel.style.borderLeftColor = agent.color;
+  document.getElementById('agent-avatar').textContent = agent.emoji;
+  document.getElementById('agent-avatar').style.cssText = `border-color:${agent.color};box-shadow:0 0 15px ${agent.color}40;background:${agent.color}15;`;
+  document.getElementById('agent-name').textContent = agent.name;
+  document.getElementById('agent-name').style.color = agent.color;
+  document.getElementById('agent-dept').textContent = agent.dept;
+  document.getElementById('send-btn').style.background = agent.color;
+
+  const msgs = document.getElementById('chat-messages');
+  if (!chatHistory[key]) {
+    chatHistory[key] = [];
+    domCache[key] = '';
+    msgs.innerHTML = '';
+    addMessage('agent', agent.greeting, key);
+  } else {
+    msgs.innerHTML = domCache[key];
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // Render quick actions
+  const qa = document.getElementById('quick-actions');
+  qa.innerHTML = agent.quickActions.map(q => `<button class="qa-btn" onclick="quickSend(this)">${q}</button>`).join('');
+
+  // Update context bar
+  updateContextBar();
+
+  // Agent walks toward user
+  walkAgentToUser(key);
+  setAgentState(key, 'busy');
+
+  panel.classList.add('open');
+  showNotification(`${agent.emoji} ${agent.name} CONECTADO`, agent.color);
+  spawnParticles(agent.color);
+  setTimeout(() => document.getElementById('chat-input').focus(), 400);
+}
+
+function quickSend(btn) {
+  if (!currentAgent || isLoading) return;
+  document.getElementById('chat-input').value = btn.textContent;
+  sendMessage();
+}
+
+function closeChat() {
+  if (currentAgent) {
+    domCache[currentAgent] = document.getElementById('chat-messages').innerHTML;
+    setAgentState(currentAgent, 'available');
+  }
+  document.getElementById('chat-panel').classList.remove('open');
+  currentAgent = null;
+}
+
+function addMessage(role, text, key) {
+  const agent = agents[key || currentAgent];
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const html = text.replace(/\n/g, '<br>');
+  if (role === 'agent') {
+    div.innerHTML = `<div class="msg-avatar" style="border-color:${agent.color};background:${agent.color}15;">${agent.emoji}</div><div class="msg-bubble" style="border-left-color:${agent.color};color:${agent.color}dd;">${html}</div>`;
+  } else {
+    div.innerHTML = `<div class="msg-bubble">${html}</div><div class="msg-avatar" style="border-color:var(--neon-cyan);background:rgba(0,255,255,0.1);">👤</div>`;
+  }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const agent = agents[currentAgent];
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.id = 'typing'; div.className = 'msg agent';
+  div.innerHTML = `<div class="msg-avatar" style="border-color:${agent.color};background:${agent.color}15;">${agent.emoji}</div><div class="typing-indicator"><div class="typing-dot" style="background:${agent.color}"></div><div class="typing-dot" style="background:${agent.color}"></div><div class="typing-dot" style="background:${agent.color}"></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function hideTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+
+// NOTION
+let notionOn = false;
+function toggleNotion() {
+  notionOn = !notionOn;
+  const btn = document.getElementById('notion-btn');
+  const st = document.getElementById('notion-status');
+  if (notionOn) {
+    btn.classList.add('on');
+    btn.textContent = '📄 Guardar en Notion ✓';
+    st.textContent = 'Activo — próxima respuesta se guardará';
+    st.className = 'ok';
+  } else {
+    btn.classList.remove('on');
+    btn.textContent = '📄 Guardar en Notion';
+    st.textContent = 'Desactivado';
+    st.className = '';
+  }
+}
+
+async function sendMessage() {
+  if (!currentAgent || isLoading) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  addMessage('user', text);
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+  setAgentState(currentAgent, 'thinking');
+  showTyping();
+
+  chatHistory[currentAgent].push({ role: 'user', content: text });
+
+  const saveThis = notionOn;
+  if (saveThis) {
+    notionOn = false;
+    const btn = document.getElementById('notion-btn');
+    btn.classList.remove('on');
+    btn.textContent = '📄 Guardar en Notion';
+    document.getElementById('notion-status').textContent = 'Guardando...';
+    document.getElementById('notion-status').className = '';
+  }
+
+  try {
+    // Get current session token
+    const { data: { session } } = await sbClient.auth.getSession();
+    const authToken = session?.access_token || '';
+
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({
+        system: agents[currentAgent].system + getContextSummary(),
+        messages: chatHistory[currentAgent],
+        saveToNotion: saveThis,
+        docTitle: text.substring(0, 60),
+        agentName: agents[currentAgent].name
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || '⚠ Error de conexión.';
+    chatHistory[currentAgent].push({ role: 'assistant', content: reply });
+    addToContext('user', text, agents[currentAgent].name);
+    addToContext('agent', reply, agents[currentAgent].name);
+    setAgentState(currentAgent, 'busy');
+    hideTyping();
+    addMessage('agent', reply);
+
+    if (saveThis) {
+      const st = document.getElementById('notion-status');
+      if (data.savedToNotion) {
+        st.textContent = '✓ Guardado en Notion';
+        st.className = 'ok';
+      } else {
+        st.textContent = '⚠ Error al guardar';
+        st.className = 'err';
+      }
+      setTimeout(() => { st.textContent = 'Desactivado'; st.className = ''; }, 4000);
+    }
+  } catch (e) {
+    hideTyping();
+    addMessage('agent', '⚠ Error de conexión con el agente.');
+  }
+
+  isLoading = false;
+  document.getElementById('send-btn').disabled = false;
+  input.focus();
+}
+
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// GENERATE FULL DOCUMENT
+async function generateDoc() {
+  if (!currentAgent || isLoading) return;
+  const agent = agents[currentAgent];
+  const btn = document.getElementById('gen-doc-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando documento...';
+
+  const docPrompts = {
+    strategy: 'Basándote en nuestra conversación, crea un documento estratégico completo con: resumen ejecutivo, análisis de situación, objetivos, estrategia propuesta, plan de acción con pasos concretos y métricas de éxito. Usa formato estructurado con secciones claras.',
+    content: 'Basándote en nuestra conversación, crea un plan de contenido completo con: estrategia de contenido, calendario de publicaciones para 30 días, ejemplos de posts/guiones listos para usar, y recomendaciones de canales. Formato estructurado.',
+    sales: 'Basándote en nuestra conversación, crea una propuesta comercial completa con: presentación del servicio/producto, propuesta de valor, pricing, proceso de trabajo, casos de uso, y llamada a la acción. Formato profesional listo para enviar.',
+    analysis: 'Basándote en nuestra conversación, crea un reporte de análisis completo con: resumen ejecutivo, métricas clave, análisis de tendencias, hallazgos principales, recomendaciones accionables y próximos pasos. Formato de reporte profesional.'
+  };
+
+  const contextHist = chatHistory[currentAgent] && chatHistory[currentAgent].length > 0
+    ? chatHistory[currentAgent]
+    : [{ role: 'user', content: 'Crea un documento de ejemplo para tu especialidad.' }];
+
+  isLoading = true;
+  showTyping();
+
+  try {
+    // Get current session token
+    const { data: { session } } = await sbClient.auth.getSession();
+    const authToken = session?.access_token || '';
+
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({
+        system: agent.system + getContextSummary() + '\n\nCuando generes documentos, usa formato estructurado con secciones, subtítulos y listas. Sé detallado y profesional. Máximo 500 palabras.',
+        messages: [...contextHist, { role: 'user', content: docPrompts[currentAgent] }],
+        saveToNotion: true,
+        docTitle: `[DOC] ${agent.name} — ${new Date().toLocaleDateString('es-ES')}`,
+        agentName: agent.name
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || '⚠ Error generando documento.';
+    chatHistory[currentAgent].push({ role: 'user', content: docPrompts[currentAgent] });
+    chatHistory[currentAgent].push({ role: 'assistant', content: reply });
+    hideTyping();
+    addMessage('agent', reply);
+
+    const st = document.getElementById('notion-status');
+    if (data.savedToNotion) {
+      st.textContent = '✓ Documento guardado en Notion';
+      st.className = 'ok';
+      setTimeout(() => { st.textContent = 'Desactivado'; st.className = ''; }, 4000);
+    }
+  } catch(e) {
+    hideTyping();
+    addMessage('agent', '⚠ Error generando documento.');
+  }
+
+  isLoading = false;
+  btn.disabled = false;
+  btn.textContent = '⚡ Generar documento completo';
+}
+
+function showNotification(text, color) {
+  const n = document.getElementById('notification');
+  n.style.borderColor = color || 'var(--neon-green)';
+  n.style.color = color || 'var(--neon-green)';
+  n.style.textShadow = `0 0 10px ${color || 'var(--neon-green)'}`;
+  n.textContent = text;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 2500);
+}
+
+function spawnParticles(color) {
+  const symbols = ['◈','⚡','★','◆','▲','●'];
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+    p.style.cssText = `left:${Math.random()*60+20}%;top:${Math.random()*50+20}%;color:${color};text-shadow:0 0 6px ${color};animation-delay:${Math.random()*0.5}s;`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3000);
+  }
+}
+
+document.querySelectorAll('.agent-sprite').forEach((s, i) => {
+  s.style.animationDuration = (1.2 + i * 0.3) + 's';
+  s.style.animationDelay = (i * 0.4) + 's';
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeChat();
+});
+
+// ============================================================
+// SUPABASE AUTH
+// ============================================================
+const SUPABASE_URL = 'https://hmvduevkpgvkihqfwxnl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jicNZ2mxc5fjicKNKDZrAA_oMU2oNLJ';
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let authMode = 'login';
+
+function switchTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i) => {
+    t.classList.toggle('active', (i===0 && mode==='login') || (i===1 && mode==='signup'));
+  });
+  document.getElementById('auth-btn').textContent = mode === 'login' ? 'ENTRAR' : 'CREAR CUENTA';
+  document.getElementById('auth-msg').textContent = '';
+  document.getElementById('auth-msg').className = '';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value.trim();
+  const msg = document.getElementById('auth-msg');
+  const btn = document.getElementById('auth-btn');
+
+  if (!email || !password) { msg.textContent = 'Completá todos los campos.'; msg.className = 'err'; return; }
+  if (password.length < 6) { msg.textContent = 'La contraseña debe tener al menos 6 caracteres.'; msg.className = 'err'; return; }
+
+  btn.disabled = true;
+  msg.textContent = 'Procesando...'; msg.className = '';
+
+  try {
+    let result;
+    if (authMode === 'login') {
+      result = await sbClient.auth.signInWithPassword({ email, password });
+    } else {
+      result = await sbClient.auth.signUp({ email, password });
+    }
+
+    if (result.error) {
+      let errMsg = result.error.message;
+      if (errMsg.includes('Invalid login')) errMsg = 'Email o contraseña incorrectos.';
+      if (errMsg.includes('already registered')) errMsg = 'Este email ya está registrado.';
+      msg.textContent = errMsg; msg.className = 'err';
+      btn.disabled = false;
+    } else {
+      if (authMode === 'signup' && !result.data.session) {
+        msg.textContent = '✓ Revisá tu email para confirmar tu cuenta.'; msg.className = 'ok';
+        btn.disabled = false;
+      } else {
+        enterApp(result.data.user);
+      }
+    }
+  } catch(e) {
+    msg.textContent = 'Error de conexión.'; msg.className = 'err';
+    btn.disabled = false;
+  }
+}
+
+function enterApp(user) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('user-bar').classList.add('visible');
+  document.getElementById('user-email').textContent = user.email;
+}
+
+async function handleLogout() {
+  await sbClient.auth.signOut();
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('user-bar').classList.remove('visible');
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
+  document.getElementById('auth-msg').textContent = '';
+  closeChat();
+}
+
+// Check session on load
+sbClient.auth.getSession().then(({ data }) => {
+  if (data.session) {
+    enterApp(data.session.user);
+  }
+});
+
+// Listen for auth changes
+sbClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) enterApp(session.user);
+  if (event === 'SIGNED_OUT') {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('user-bar').classList.remove('visible');
+  }
+});
+
+document.getElementById('auth-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleAuth();
+});
+</script>
+</body>
+</html>
