@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus Agency · Launch Command Center</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Barlow+Condensed:wght@300;400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --brand:#0A0A0F; --brand2:#111118; --brand3:#18181F;
+  --accent:#6C63FF; --accent2:#A89CFF; --accent3:#3D35CC;
+  --gold:#C9A96E; --gold-lt:#E8D5A3;
+  --green:#2A7A52; --green-lt:#4AAA72;
+  --border:rgba(108,99,255,0.18); --border-lt:rgba(108,99,255,0.08);
+  --text:#F0EEF8; --text-mid:rgba(240,238,248,0.65); --text-dim:rgba(240,238,248,0.35);
+  --ca:#6C63FF;
+}
+body.t-vino{--ca:#8B2235} body.t-blue{--ca:#2A4A9A} body.t-green{--ca:#2A7A52} body.t-gold{--ca:#9A7A40} body.t-purple{--ca:#6C35AA}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:15px}
+body{font-family:'Barlow',sans-serif;background:var(--brand);color:var(--text);min-height:100vh}
+::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:var(--brand2)} ::-webkit-scrollbar-thumb{background:var(--ca)}
+
+/* ══ SETUP ══ */
+#setupScreen{position:fixed;inset:0;background:var(--brand);z-index:1000;display:flex;align-items:center;justify-content:center;padding:2rem;overflow-y:auto}
+.setup-box{width:100%;max-width:700px;background:var(--brand2);border:1px solid var(--border);overflow:hidden}
+.setup-header{background:linear-gradient(135deg,var(--accent3),var(--accent));padding:2rem 2.5rem;display:flex;justify-content:space-between;align-items:flex-end}
+.setup-agency{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.45em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-bottom:.3rem}
+.setup-title{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:900;color:#fff}
+.setup-badge{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);padding:.3rem .8rem;color:#fff;align-self:flex-start}
+.setup-body{padding:2rem 2.5rem}
+.setup-row{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.2rem}
+.setup-row.full{grid-template-columns:1fr}
+.field-label{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.35em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.4rem}
+.field-req{color:var(--accent2)}
+.setup-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(108,99,255,.25);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:600;padding:.65rem 1rem;outline:none;transition:border-color .2s;letter-spacing:.03em}
+.setup-input:focus{border-color:var(--accent)}
+.setup-input::placeholder{color:var(--text-dim)}
+.color-selector{display:flex;gap:.6rem;margin-top:.5rem}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .2s;position:relative;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:transparent}
+.color-dot.selected{border-color:#fff;transform:scale(1.15);color:#fff}
+.comm-calc{background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.15);padding:1rem 1.2rem;margin-top:.5rem;display:flex;align-items:center;justify-content:space-between}
+.cc-label{font-size:.72rem;color:var(--text-dim)}
+.cc-result{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--gold)}
+.setup-footer{padding:1.5rem 2.5rem;border-top:1px solid rgba(108,99,255,.12);display:flex;justify-content:space-between;align-items:center}
+.setup-note{font-size:.7rem;color:var(--text-dim)}
+.btn-launch{font-family:'Barlow Condensed',sans-serif;font-size:.8rem;font-weight:800;letter-spacing:.25em;text-transform:uppercase;background:linear-gradient(135deg,var(--accent3),var(--accent));color:#fff;border:none;padding:.8rem 2rem;cursor:pointer;transition:all .25s}
+.btn-launch:hover{opacity:.88;transform:translateY(-1px)}
+
+/* ══ MULTI-CLIENT SELECTOR ══ */
+.saved-clients{margin-top:1.2rem;border-top:1px solid rgba(108,99,255,.12);padding-top:1.2rem}
+.saved-label{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.35em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.6rem}
+.saved-list{display:flex;flex-wrap:wrap;gap:.5rem}
+.saved-chip{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:600;padding:.35rem .85rem;background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.25);color:var(--accent2);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.5rem}
+.saved-chip:hover{background:rgba(108,99,255,.2)}
+.saved-chip .del-btn{color:rgba(240,238,248,.3);font-size:.7rem;padding:0 .2rem}
+.saved-chip .del-btn:hover{color:#E84040}
+
+/* ══ APP ══ */
+#appScreen{display:none}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--brand2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-top{padding:1.6rem 1.4rem 1.2rem;border-bottom:1px solid var(--border)}
+.sb-agency{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.45em;text-transform:uppercase;color:var(--accent2);margin-bottom:.2rem}
+.sb-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--text);letter-spacing:-.01em}
+.sb-client-name{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:600;color:var(--text-dim);margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.client-chip{display:inline-flex;align-items:center;gap:.4rem;margin-top:.6rem;padding:.25rem .7rem;background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.25);font-family:'Barlow Condensed',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--accent2)}
+.chip-dot{width:6px;height:6px;border-radius:50%;background:var(--green-lt);animation:pulseDot 2s ease-in-out infinite}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-nav{padding:.8rem 0;flex:1}
+.nav-group-label{font-family:'Barlow Condensed',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:.4em;text-transform:uppercase;color:rgba(168,156,255,.25);padding:.8rem 1.4rem .3rem}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.6rem 1.4rem;cursor:pointer;transition:all .2s;border-left:3px solid transparent;font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-dim)}
+.nav-item:hover{background:rgba(108,99,255,.06);color:var(--text)}
+.nav-item.active{background:rgba(108,99,255,.1);border-left-color:var(--accent);color:var(--accent2)}
+.nav-icon{font-size:.85rem;width:15px;text-align:center}
+.sb-footer{padding:1.2rem 1.4rem;border-top:1px solid var(--border)}
+.days-box{background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2);padding:.8rem;text-align:center;margin-bottom:.8rem}
+.days-label{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--accent2);margin-bottom:.2rem}
+.days-num{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--text);line-height:1;cursor:pointer}
+.days-sub{font-size:.6rem;color:var(--text-dim);margin-top:.2rem}
+.reset-btn{width:100%;font-family:'Barlow Condensed',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:var(--text-dim);padding:.5rem;cursor:pointer;transition:all .2s;margin-bottom:.5rem}
+.reset-btn:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+
+/* MAIN */
+.main{background:var(--brand);overflow-y:auto}
+.topbar{background:var(--brand2);border-bottom:1px solid var(--border);padding:.9rem 2.2rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+.tb-page{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.35em;text-transform:uppercase;color:var(--text-dim)}
+.tb-title{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--text)}
+.tb-right{display:flex;gap:.8rem;align-items:center}
+.status-pill{display:flex;align-items:center;gap:.5rem;padding:.3rem .8rem;background:rgba(74,170,114,.08);border:1px solid rgba(74,170,114,.2);font-family:'Barlow Condensed',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--green-lt)}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--green-lt);animation:pulseDot 2s ease-in-out infinite}
+
+/* SECTIONS */
+.section{display:none;padding:1.8rem 2.2rem}
+.section.active{display:block;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* COMPONENTS */
+.sec-header{margin-bottom:1.8rem}
+.sec-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.4em;text-transform:uppercase;color:var(--accent2);margin-bottom:.35rem}
+.sec-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--text)}
+.sec-title em{font-style:italic;color:var(--accent2)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.card{background:var(--brand2);border:1px solid var(--border);padding:1.3rem 1.5rem;position:relative;transition:border-color .25s}
+.card:hover{border-color:rgba(108,99,255,.35)}
+.card-tag{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;margin-bottom:.55rem;display:block}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:.4rem}
+.card-body{font-size:.75rem;font-weight:300;color:var(--text-dim);line-height:1.65}
+.stat-card{background:var(--brand2);border:1px solid var(--border);padding:1.3rem 1.5rem;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ca);transform:scaleX(0);transform-origin:left;transition:transform .4s}
+.stat-card:hover::before{transform:scaleX(1)}
+.stat-label{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.45rem}
+.stat-value{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--text);line-height:1;margin-bottom:.25rem}
+.stat-sub{font-size:.68rem;color:var(--text-dim)}
+.sv-accent{color:var(--accent2)} .sv-gold{color:var(--gold)} .sv-green{color:var(--green-lt)}
+.prog-wrap{margin-top:.75rem}
+.prog-header{display:flex;justify-content:space-between;margin-bottom:.35rem}
+.prog-label{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--text-dim)}
+.prog-pct{font-family:'Barlow Condensed',sans-serif;font-size:.7rem;font-weight:700;color:var(--accent2)}
+.prog-track{height:4px;background:rgba(255,255,255,.06);overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent3),var(--accent));transition:width .6s cubic-bezier(.4,0,.2,1)}
+.prog-fill.g{background:linear-gradient(90deg,var(--green),var(--green-lt))}
+.prog-fill.gold{background:linear-gradient(90deg,#9A7A40,var(--gold))}
+.inp{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:600;padding:.5rem .75rem;width:100%;outline:none;transition:border-color .2s}
+.inp:focus{border-color:var(--accent)}
+.inp::placeholder{color:var(--text-dim)}
+.inp-num{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--accent2);font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;padding:.35rem .5rem;width:82px;outline:none;text-align:center;transition:border-color .2s}
+.inp-num:focus{border-color:var(--accent)}
+.btn{font-family:'Barlow Condensed',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;padding:.52rem 1.2rem;border:none;cursor:pointer;transition:all .2s}
+.btn-accent{background:var(--accent);color:#fff} .btn-accent:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--accent2)} .btn-outline:hover{border-color:var(--accent2)}
+.btn-sm{padding:.32rem .75rem;font-size:.62rem}
+.btn-gold{background:rgba(201,169,110,.15);border:1px solid rgba(201,169,110,.3);color:var(--gold)} .btn-gold:hover{background:rgba(201,169,110,.25)}
+.proj-bar{background:rgba(108,99,255,.05);border:1px solid rgba(108,99,255,.18);display:grid;grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem}
+.proj-item{padding:1.2rem 1.5rem;border-right:1px solid rgba(108,99,255,.12);text-align:center}
+.proj-item:last-child{border-right:none}
+.proj-num{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--gold);line-height:1}
+.proj-label{font-size:.65rem;color:var(--text-dim);margin-top:.3rem;line-height:1.4}
+.rhythm-box{background:var(--brand2);border:1px solid var(--border);padding:1.2rem 1.4rem;text-align:center}
+.rhythm-label{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.5rem}
+.rhythm-val{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;margin-bottom:.3rem}
+.rhythm-sub{font-size:.68rem;color:var(--text-dim);line-height:1.5}
+.r-ok{color:var(--green-lt)} .r-warn{color:var(--gold)} .r-bad{color:#E84040}
+.phase-nav{display:flex;margin-bottom:1.4rem}
+.phase-btn{flex:1;padding:.7rem .5rem;background:var(--brand2);border:1px solid var(--border);border-right:none;cursor:pointer;transition:all .2s;text-align:center}
+.phase-btn:last-child{border-right:1px solid var(--border)}
+.phase-btn.active{background:rgba(108,99,255,.1);border-color:rgba(108,99,255,.3)}
+.phase-btn.done{background:rgba(42,122,82,.06)}
+.pb-num{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.25em;color:var(--text-dim)}
+.phase-btn.active .pb-num{color:var(--accent2)}
+.phase-btn.done .pb-num{color:var(--green-lt)}
+.pb-name{font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:700;color:var(--text-dim);margin-top:.2rem}
+.phase-btn.active .pb-name{color:var(--text)}
+.pb-days{font-size:.6rem;color:var(--text-dim);margin-top:.1rem}
+.checklist{display:flex;flex-direction:column;gap:.45rem}
+.check-item{display:flex;align-items:flex-start;gap:.65rem;padding:.6rem .9rem;background:rgba(255,255,255,.02);border:1px solid transparent;cursor:pointer;transition:all .2s}
+.check-item:hover{background:rgba(108,99,255,.05);border-color:var(--border)}
+.check-item.done{opacity:.5}
+.check-box{width:16px;height:16px;border:2px solid rgba(108,99,255,.35);flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .2s}
+.check-item.done .check-box{background:var(--accent);border-color:var(--accent)}
+.check-mark{font-size:.55rem;color:#fff;display:none}
+.check-item.done .check-mark{display:block}
+.check-text{font-size:.76rem;color:var(--text-mid);line-height:1.5}
+.check-item.done .check-text{text-decoration:line-through;color:var(--text-dim)}
+.tab-nav{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.4rem}
+.tab-btn{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;padding:.65rem 1.2rem;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-dim);cursor:pointer;margin-bottom:-1px;transition:all .2s}
+.tab-btn.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.wa-card{background:var(--brand3);border:1px solid var(--border);margin-bottom:1rem;overflow:hidden}
+.wa-head{display:flex;justify-content:space-between;align-items:center;padding:.65rem 1.1rem;background:rgba(108,99,255,.06);border-bottom:1px solid var(--border)}
+.wa-head-title{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2)}
+.wa-seg{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;padding:.18rem .55rem}
+.seg-hot{color:#E84040;background:rgba(232,64,64,.1);border:1px solid rgba(232,64,64,.2)}
+.seg-warm{color:var(--gold);background:rgba(201,169,110,.1);border:1px solid rgba(201,169,110,.2)}
+.seg-cold{color:#6699CC;background:rgba(102,153,204,.1);border:1px solid rgba(102,153,204,.2)}
+.seg-all{color:var(--accent2);background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.2)}
+.wa-body{padding:1.1rem}
+.bubble{background:#1A2F1E;border-radius:2px 10px 10px 10px;padding:.85rem 1rem;font-size:.75rem;color:#C0DDB8;line-height:1.75;white-space:pre-line}
+.wa-note{margin-top:.75rem;padding:.55rem .8rem;background:rgba(255,255,255,.02);border-left:2px solid rgba(108,99,255,.4);font-size:.68rem;color:var(--text-dim);line-height:1.5}
+.copy-btn{display:flex;align-items:center;gap:.4rem;font-family:'Barlow Condensed',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;background:rgba(108,99,255,.08);border:1px solid var(--border);color:var(--accent2);padding:.38rem .85rem;cursor:pointer;transition:all .2s;margin-top:.75rem}
+.copy-btn:hover{background:rgba(108,99,255,.15)}
+.copy-btn.copied{color:var(--green-lt);border-color:rgba(74,170,114,.3);background:rgba(74,170,114,.06)}
+.seg-tracker{background:var(--brand2);border:1px solid var(--border);padding:1.3rem 1.5rem}
+.tr-row{display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.tr-row:last-child{border-bottom:none}
+.tr-label{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.05em;color:var(--text-mid)}
+.tr-right{display:flex;align-items:center;gap:.75rem}
+.tr-bar-wrap{width:100px;height:3px;background:rgba(255,255,255,.06)}
+.tr-bar{height:100%;transition:width .5s ease}
+.obj-card{background:var(--brand2);border:1px solid var(--border);overflow:hidden}
+.obj-head{padding:.65rem 1.1rem;background:rgba(201,169,110,.05);border-bottom:1px solid rgba(201,169,110,.12);display:flex;align-items:center;gap:.65rem}
+.obj-emoji{font-size:1.1rem}
+.obj-title{font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;color:var(--gold)}
+.obj-body{padding:1.1rem}
+.obj-trigger{font-size:.68rem;font-style:italic;color:var(--text-dim);margin-bottom:.75rem;line-height:1.5}
+.obj-resp{padding:.75rem .9rem;background:rgba(42,122,82,.05);border-left:2px solid var(--green);font-size:.72rem;color:var(--text-mid);line-height:1.65}
+.divider{height:1px;background:var(--border);margin:1.5rem 0}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--accent);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.2em;padding:.65rem 1.3rem;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ══ AI AGENTS ══ */
+.agent-card{background:var(--brand2);border:1px solid var(--border);padding:1.3rem 1.5rem;position:relative;overflow:hidden}
+.agent-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--accent)}
+.agent-status{display:inline-flex;align-items:center;gap:.4rem;font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;padding:.2rem .6rem;margin-bottom:.7rem}
+.as-active{color:var(--green-lt);background:rgba(74,170,114,.08);border:1px solid rgba(74,170,114,.2)}
+.as-pending{color:var(--gold);background:rgba(201,169,110,.08);border:1px solid rgba(201,169,110,.2)}
+.as-idle{color:var(--text-dim);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.agent-name{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:.3rem}
+.agent-role{font-size:.72rem;color:var(--text-dim);line-height:1.5;margin-bottom:.8rem}
+
+/* AI Chat Modal */
+.ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;display:none;align-items:center;justify-content:center}
+.ai-modal-overlay.open{display:flex}
+.ai-modal{width:680px;max-height:85vh;background:var(--brand2);border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.ai-modal-header{padding:1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.8rem;background:rgba(108,99,255,.06)}
+.ai-modal-icon{font-size:1.2rem}
+.ai-modal-title{font-family:'Barlow Condensed',sans-serif;font-size:.85rem;font-weight:700;color:var(--accent2);letter-spacing:.1em;text-transform:uppercase;flex:1}
+.ai-modal-close{background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);font-family:'Barlow Condensed',sans-serif;font-size:.65rem;padding:.25rem .65rem;cursor:pointer;letter-spacing:.1em}
+.ai-modal-close:hover{border-color:rgba(255,255,255,.25);color:var(--text)}
+.ai-chat-area{flex:1;overflow-y:auto;padding:1.2rem;display:flex;flex-direction:column;gap:.8rem;min-height:200px;max-height:400px}
+.ai-msg{max-width:85%;padding:.75rem 1rem;font-size:.75rem;line-height:1.7;animation:fadeUp .25s ease}
+.ai-msg.user{align-self:flex-end;background:rgba(108,99,255,.15);border:1px solid rgba(108,99,255,.25);color:var(--text-mid)}
+.ai-msg.assistant{align-self:flex-start;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text-mid)}
+.ai-msg.assistant .msg-name{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--accent2);margin-bottom:.4rem}
+.ai-msg.thinking{opacity:.6;font-style:italic}
+.ai-input-area{padding:1rem 1.2rem;border-top:1px solid var(--border);display:flex;gap:.7rem;background:var(--brand3)}
+.ai-input{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(108,99,255,.2);color:var(--text);font-family:'Barlow',sans-serif;font-size:.8rem;padding:.6rem .9rem;outline:none;resize:none;height:42px;transition:border-color .2s}
+.ai-input:focus{border-color:var(--accent)}
+.ai-send-btn{font-family:'Barlow Condensed',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;background:var(--accent);color:#fff;border:none;padding:.6rem 1.2rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.ai-send-btn:hover{background:var(--accent2)}
+.ai-send-btn:disabled{opacity:.4;cursor:not-allowed}
+.ai-context-bar{padding:.6rem 1.2rem;background:rgba(201,169,110,.05);border-bottom:1px solid rgba(201,169,110,.12);font-size:.65rem;color:var(--gold);font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em}
+.ai-quick-prompts{display:flex;flex-wrap:wrap;gap:.4rem;padding:.7rem 1.2rem;border-bottom:1px solid var(--border)}
+.ai-quick-btn{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:.28rem .7rem;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);color:var(--accent2);cursor:pointer;transition:all .2s}
+.ai-quick-btn:hover{background:rgba(108,99,255,.18)}
+
+/* ══ REPORTS ══ */
+.report-card{background:var(--brand2);border:1px solid var(--border);padding:1.5rem;margin-bottom:1rem}
+.report-title{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.3rem}
+.report-sub{font-size:.68rem;color:var(--text-dim);margin-bottom:1rem;line-height:1.5}
+.report-preview{background:var(--brand);border:1px solid rgba(255,255,255,.06);padding:1.2rem;margin-bottom:1rem;font-size:.72rem;color:var(--text-dim);line-height:1.8}
+.report-preview h4{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--accent2);margin-bottom:.6rem}
+.report-preview .rp-stat{display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.report-preview .rp-val{font-family:'Playfair Display',serif;font-size:.9rem;font-weight:700;color:var(--text)}
+
+/* ══ PHASE EDITOR ══ */
+.editor-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:600;display:none;align-items:center;justify-content:center;padding:1rem}
+.editor-modal-overlay.open{display:flex}
+.editor-modal{width:700px;max-height:90vh;background:var(--brand2);border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.editor-modal-header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.8rem;background:rgba(108,99,255,.06);flex-shrink:0}
+.editor-modal-title{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:700;color:var(--accent2);letter-spacing:.12em;text-transform:uppercase;flex:1}
+.editor-modal-close{background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);font-family:'Barlow Condensed',sans-serif;font-size:.65rem;padding:.28rem .7rem;cursor:pointer;letter-spacing:.1em}
+.editor-modal-close:hover{border-color:rgba(255,255,255,.25);color:var(--text)}
+.editor-body{overflow-y:auto;padding:1.4rem 1.5rem;flex:1}
+.editor-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.8rem;justify-content:flex-end;flex-shrink:0;background:var(--brand3)}
+
+/* Phase list in editor */
+.phase-editor-list{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.2rem}
+.phase-editor-item{background:var(--brand3);border:1px solid var(--border);overflow:hidden}
+.phase-editor-header{display:flex;align-items:center;gap:.7rem;padding:.75rem 1rem;cursor:pointer;user-select:none;transition:background .2s}
+.phase-editor-header:hover{background:rgba(108,99,255,.06)}
+.phase-editor-handle{color:var(--text-dim);font-size:.8rem;cursor:grab}
+.phase-editor-num{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.25em;color:var(--accent2);min-width:50px}
+.phase-editor-name-display{font-family:'Barlow Condensed',sans-serif;font-size:.85rem;font-weight:700;color:var(--text);flex:1}
+.phase-editor-toggle{font-size:.7rem;color:var(--text-dim);transition:transform .2s}
+.phase-editor-toggle.open{transform:rotate(180deg)}
+.phase-editor-body{display:none;padding:1rem;border-top:1px solid var(--border);background:rgba(0,0,0,.15)}
+.phase-editor-body.open{display:block}
+
+.editor-field{margin-bottom:1rem}
+.editor-label{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.35rem}
+.editor-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(108,99,255,.2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:.88rem;font-weight:600;padding:.55rem .8rem;outline:none;transition:border-color .2s}
+.editor-input:focus{border-color:var(--accent)}
+.editor-input::placeholder{color:var(--text-dim)}
+.editor-textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(108,99,255,.2);color:var(--text-mid);font-family:'Barlow',sans-serif;font-size:.78rem;padding:.55rem .8rem;outline:none;transition:border-color .2s;resize:vertical;min-height:60px;line-height:1.6}
+.editor-textarea:focus{border-color:var(--accent)}
+
+/* Task list inside phase editor */
+.task-list{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.7rem}
+.task-item{display:flex;align-items:center;gap:.5rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);padding:.45rem .7rem}
+.task-item-input{flex:1;background:none;border:none;color:var(--text-mid);font-family:'Barlow',sans-serif;font-size:.78rem;outline:none;padding:0}
+.task-item-input::placeholder{color:rgba(240,238,248,.2)}
+.task-del-btn{background:none;border:none;color:rgba(232,64,64,.4);font-size:.9rem;cursor:pointer;padding:0 .25rem;line-height:1;flex-shrink:0;transition:color .2s}
+.task-del-btn:hover{color:#E84040}
+.add-task-btn{display:flex;align-items:center;gap:.4rem;font-family:'Barlow Condensed',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;background:rgba(108,99,255,.06);border:1px dashed rgba(108,99,255,.25);color:var(--accent2);padding:.4rem .8rem;cursor:pointer;transition:all .2s;width:100%;justify-content:center}
+.add-task-btn:hover{background:rgba(108,99,255,.14);border-color:rgba(108,99,255,.5)}
+
+/* Phase action buttons */
+.phase-actions{display:flex;gap:.5rem;margin-top:.8rem;padding-top:.8rem;border-top:1px solid rgba(255,255,255,.06)}
+.phase-del-btn{background:rgba(232,64,64,.08);border:1px solid rgba(232,64,64,.2);color:#E84040;font-family:'Barlow Condensed',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding:.3rem .8rem;cursor:pointer;margin-left:auto;transition:all .2s}
+.phase-del-btn:hover{background:rgba(232,64,64,.18)}
+
+/* Add phase button */
+.add-phase-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;font-family:'Barlow Condensed',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;background:rgba(108,99,255,.06);border:1px dashed rgba(108,99,255,.3);color:var(--accent2);padding:.75rem;cursor:pointer;transition:all .2s;width:100%}
+.add-phase-btn:hover{background:rgba(108,99,255,.14)}
+
+/* Edit buttons in live view */
+.edit-inline-btn{font-family:'Barlow Condensed',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);color:var(--accent2);padding:.22rem .65rem;cursor:pointer;transition:all .2s;margin-left:.6rem;vertical-align:middle}
+.edit-inline-btn:hover{background:rgba(108,99,255,.2)}
+
+/* Daily tasks editor */
+.daily-section-editor{background:var(--brand3);border:1px solid var(--border);padding:1rem 1.2rem;margin-bottom:.8rem}
+.daily-section-title-input{background:rgba(255,255,255,.04);border:1px solid rgba(108,99,255,.2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:700;padding:.35rem .65rem;outline:none;transition:border-color .2s;width:100%;margin-bottom:.7rem}
+.daily-section-title-input:focus{border-color:var(--accent)}
+
+/* PDF print styles */
+@media print {
+  body{background:#fff;color:#000;font-family:Georgia,serif}
+  #setupScreen,#appScreen .sidebar,.topbar,.ai-modal-overlay,#reportModal{display:none!important}
+  .main{overflow:visible}
+  .section{display:block!important;page-break-after:always}
+  .stat-card,card,proj-bar{border:1px solid #ccc!important;background:#f9f9f9!important}
+  .stat-value,.proj-num,.sec-title{color:#000!important}
+  .stat-label,.sec-eyebrow,.card-tag{color:#555!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP SCREEN ══ -->
+<div id="setupScreen">
+  <div class="setup-box">
+    <div class="setup-header">
+      <div>
+        <div class="setup-agency">Nexus Agency</div>
+        <div class="setup-title">Launch Command Center</div>
+      </div>
+      <div class="setup-badge">v3.0 · IA Integrada</div>
+    </div>
+    <div class="setup-body">
+      <div class="setup-row">
+        <div>
+          <div class="field-label">Nombre del cliente <span class="field-required">*</span></div>
+          <input class="setup-input" id="s-client" placeholder="Ej: Laura García" oninput="updateCalc()">
+        </div>
+        <div>
+          <div class="field-label">Nombre del programa <span class="field-required">*</span></div>
+          <input class="setup-input" id="s-program" placeholder="Ej: ACTÚA" oninput="updateCalc()">
+        </div>
+      </div>
+      <div class="setup-row">
+        <div>
+          <div class="field-label">Precio del producto (USD)</div>
+          <input class="setup-input" id="s-price" type="number" placeholder="197" value="197" oninput="updateCalc()">
+        </div>
+        <div>
+          <div class="field-label">Total de plazas</div>
+          <input class="setup-input" id="s-spots" type="number" placeholder="300" value="300" oninput="updateCalc()">
+        </div>
+      </div>
+      <div class="setup-row">
+        <div>
+          <div class="field-label">Tu comisión % (del total)</div>
+          <input class="setup-input" id="s-comm" type="number" placeholder="35" value="35" oninput="updateCalc()">
+        </div>
+        <div>
+          <div class="field-label">Número de socios</div>
+          <input class="setup-input" id="s-partners" type="number" placeholder="1" value="1" oninput="updateCalc()">
+        </div>
+      </div>
+      <div class="setup-row">
+        <div>
+          <div class="field-label">Días hasta el webinar</div>
+          <input class="setup-input" id="s-days" type="number" placeholder="14" value="14" oninput="updateCalc()">
+        </div>
+        <div>
+          <div class="field-label">Nicho del cliente</div>
+          <input class="setup-input" id="s-niche" placeholder="Ej: Fitness femenino">
+        </div>
+      </div>
+      <div class="setup-row full">
+        <div>
+          <div class="field-label">Color de acento</div>
+          <div class="color-selector">
+            <div class="color-dot selected" style="background:#6C63FF" data-theme="purple" onclick="selectColor(this)">✓</div>
+            <div class="color-dot" style="background:#8B2235" data-theme="vino" onclick="selectColor(this)">✓</div>
+            <div class="color-dot" style="background:#2A4A9A" data-theme="blue" onclick="selectColor(this)">✓</div>
+            <div class="color-dot" style="background:#2A7A52" data-theme="green" onclick="selectColor(this)">✓</div>
+            <div class="color-dot" style="background:#9A7A40" data-theme="gold" onclick="selectColor(this)">✓</div>
+          </div>
+        </div>
+      </div>
+      <div class="comm-calc">
+        <div class="cc-label">Tu comisión estimada si se llena al 100%:</div>
+        <div class="cc-result" id="commResult">$0</div>
+      </div>
+
+      <!-- SAVED CLIENTS -->
+      <div class="saved-clients" id="savedClientsSection" style="display:none">
+        <div class="saved-label">Lanzamientos guardados</div>
+        <div class="saved-list" id="savedClientsList"></div>
+      </div>
+    </div>
+    <div class="setup-footer">
+      <div class="setup-note">💾 Los datos se guardan automáticamente en tu navegador</div>
+      <button class="btn-launch" onclick="launchApp()">⚡ Abrir Command Center</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="appScreen">
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-top">
+      <div class="sb-agency">Nexus Agency</div>
+      <div class="sb-logo" id="sb-program">—</div>
+      <div class="sb-client-name" id="sb-client">Cliente</div>
+      <div class="client-chip"><div class="chip-dot"></div><span id="sb-niche">Nicho</span></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-group-label">Principal</div>
+      <div class="nav-item active" onclick="showSec('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</div>
+      <div class="nav-item" onclick="showSec('tracker',this)"><span class="nav-icon">📈</span>Tracker Leads</div>
+      <div class="nav-group-label">Estrategia</div>
+      <div class="nav-item" onclick="showSec('fases',this)"><span class="nav-icon">🗺</span>Fases</div>
+      <div class="nav-item" onclick="showSec('mensajes',this)"><span class="nav-icon">💬</span>Mensajes WA</div>
+      <div class="nav-item" onclick="showSec('objeciones',this)"><span class="nav-icon">🛡</span>Objeciones</div>
+      <div class="nav-group-label">Operativo</div>
+      <div class="nav-item" onclick="showSec('tareas',this)"><span class="nav-icon">✅</span>Checklist Diario</div>
+      <div class="nav-item" onclick="showSec('agentes',this)"><span class="nav-icon">🤖</span>Agentes IA</div>
+      <div class="nav-item" onclick="showSec('reportes',this)"><span class="nav-icon">📄</span>Reportes</div>
+    </nav>
+    <div class="sb-footer">
+      <div class="days-box">
+        <div class="days-label">Días al webinar</div>
+        <div class="days-num" id="daysNum" onclick="editDays()">14</div>
+        <div class="days-sub">Toca para editar</div>
+      </div>
+      <button class="reset-btn" onclick="switchClient()">⇄ Cambiar cliente</button>
+      <button class="reset-btn" onclick="newClient()">＋ Nuevo lanzamiento</button>
+      <button class="reset-btn" onclick="window.open('/','nexus-agency')" style="margin-top:.5rem;background:rgba(0,255,200,.06);border-color:rgba(0,255,200,.25);color:rgba(0,255,200,.8);">🏠 Agencia</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="tb-page" id="tb-page">Dashboard General</div>
+        <div class="tb-title" id="tb-title">Vista general del lanzamiento</div>
+      </div>
+      <div class="tb-right">
+        <div class="status-pill"><div class="s-dot"></div>Lanzamiento activo</div>
+        <button class="btn btn-sm btn-outline" onclick="saveCurrentState()" style="font-size:.58rem;">💾 Guardar</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="section active">
+      <div class="sec-header">
+        <div class="sec-eyebrow" id="dash-eyebrow">Lanzamiento activo</div>
+        <h1 class="sec-title">Bienvenido, <em id="dash-client">Cliente</em></h1>
+      </div>
+      <div class="proj-bar">
+        <div class="proj-item"><div class="proj-num" id="proj-total">$0</div><div class="proj-label">Facturación si se llena</div></div>
+        <div class="proj-item"><div class="proj-num" id="proj-comm">$0</div><div class="proj-label">Tu comisión estimada</div></div>
+        <div class="proj-item"><div class="proj-num" id="proj-sold">0</div><div class="proj-label">Ventas cerradas</div></div>
+        <div class="proj-item"><div class="proj-num" id="proj-pct" style="color:var(--green-lt)">0%</div><div class="proj-label">% de meta alcanzado</div></div>
+      </div>
+      <div class="grid-4" style="margin-bottom:1.1rem">
+        <div class="stat-card"><div class="stat-label">Contactados</div><div class="stat-value sv-accent" id="s-cont">0</div><div class="stat-sub">Mensajes enviados</div><div class="prog-wrap"><div class="prog-header"><span class="prog-label">Meta <span id="meta-cont">300</span></span><span class="prog-pct" id="p-cont">0%</span></div><div class="prog-track"><div class="prog-fill" id="b-cont" style="width:0%"></div></div></div></div>
+        <div class="stat-card"><div class="stat-label">En el Grupo WA</div><div class="stat-value sv-accent" id="s-grupo">0</div><div class="stat-sub">Aceptaron invitación</div><div class="prog-wrap"><div class="prog-header"><span class="prog-label">% entrada</span><span class="prog-pct" id="p-grupo">0%</span></div><div class="prog-track"><div class="prog-fill" id="b-grupo" style="width:0%"></div></div></div></div>
+        <div class="stat-card"><div class="stat-label">Reg. Webinar</div><div class="stat-value sv-gold" id="s-webinar">0</div><div class="stat-sub">Confirmaron asistencia</div><div class="prog-wrap"><div class="prog-header"><span class="prog-label">Del grupo</span><span class="prog-pct" id="p-webinar">0%</span></div><div class="prog-track"><div class="prog-fill gold" id="b-webinar" style="width:0%"></div></div></div></div>
+        <div class="stat-card"><div class="stat-label">Ventas cerradas</div><div class="stat-value sv-green" id="s-ventas">0</div><div class="stat-sub">= $<span id="recaudado">0</span></div><div class="prog-wrap"><div class="prog-header"><span class="prog-label">Meta <span id="meta-ventas">300</span></span><span class="prog-pct" id="p-ventas">0%</span></div><div class="prog-track"><div class="prog-fill g" id="b-ventas" style="width:0%"></div></div></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-tag" style="color:var(--accent2)">⚡ Registro rápido de hoy</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:.8rem">
+            <div><div class="stat-label" style="margin-bottom:.35rem">Contactados hoy</div><input class="inp-num" type="number" id="i-cont" value="0" min="0" oninput="updateDash()"></div>
+            <div><div class="stat-label" style="margin-bottom:.35rem">Entraron al grupo</div><input class="inp-num" type="number" id="i-grupo" value="0" min="0" oninput="updateDash()"></div>
+            <div><div class="stat-label" style="margin-bottom:.35rem">Reg. webinar</div><input class="inp-num" type="number" id="i-webinar" value="0" min="0" oninput="updateDash()"></div>
+            <div><div class="stat-label" style="margin-bottom:.35rem">Ventas cerradas</div><input class="inp-num" type="number" id="i-ventas" value="0" min="0" oninput="updateDash()"></div>
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:.8rem">
+            <button class="btn btn-accent" onclick="saveDash()">Guardar hoy</button>
+            <button class="btn btn-outline btn-sm" onclick="resetDash()">Reiniciar</button>
+          </div>
+        </div>
+        <div>
+          <div class="rhythm-box" style="margin-bottom:1rem">
+            <div class="rhythm-label">Ritmo del día</div>
+            <div class="rhythm-val r-warn" id="rhythmVal">◦ Sin datos aún</div>
+            <div class="rhythm-sub" id="rhythmSub">Ingresa contactos de hoy para ver tu ritmo</div>
+          </div>
+          <div class="card" style="padding:1.1rem 1.3rem">
+            <div class="card-tag" style="color:var(--accent2)">📍 Fase actual</div>
+            <div id="currentPhaseLabel" style="font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:700;color:var(--text);margin-top:.2rem">Calentamiento — Grupo WA</div>
+            <div id="currentPhaseSub" style="font-size:.72rem;color:var(--text-dim);margin-top:.3rem;line-height:1.5">Invita al grupo privado. Meta: 150 personas mínimo antes del webinar.</div>
+            <div class="prog-wrap" style="margin-top:.9rem">
+              <div class="prog-header"><span class="prog-label">Progreso fase</span><span class="prog-pct" id="phasePct">0%</span></div>
+              <div class="prog-track" style="height:6px"><div class="prog-fill" id="phaseBar" style="width:0%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRACKER -->
+    <section id="tracker" class="section">
+      <div class="sec-header"><div class="sec-eyebrow">Seguimiento por segmento</div><h1 class="sec-title">Tracker de <em>Leads</em></h1></div>
+      <div class="grid-3" style="margin-bottom:1.2rem">
+        <div class="seg-tracker">
+          <div class="card-tag" style="color:#E84040">🔥 CALIENTES</div><div class="card-title">Alta probabilidad</div><div class="card-body" style="margin-bottom:.9rem">Ya conocen al experto o a ti.</div>
+          <div class="tr-row"><div class="tr-label">Identificados</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-hi" style="width:0%;background:linear-gradient(90deg,#8B2235,#E84040)"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="hi" value="0" min="0" oninput="updateSeg('h')"></div></div>
+          <div class="tr-row"><div class="tr-label">Contactados</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-hc" style="width:0%;background:linear-gradient(90deg,#8B2235,#E84040)"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="hc" value="0" min="0" oninput="updateSeg('h')"></div></div>
+          <div class="tr-row"><div class="tr-label">En el grupo</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-hg" style="width:0%;background:linear-gradient(90deg,#8B2235,#E84040)"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="hg" value="0" min="0" oninput="updateSeg('h')"></div></div>
+          <div class="tr-row"><div class="tr-label">Compraron</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-hb" style="width:0%;background:linear-gradient(90deg,#8B2235,#E84040)"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="hb" value="0" min="0" oninput="updateSeg('h')"></div></div>
+          <div style="margin-top:.9rem;padding-top:.7rem;border-top:1px solid var(--border)"><div class="prog-header"><span class="prog-label">Conversión</span><span class="prog-pct" id="h-conv" style="color:#E84040">0%</span></div><div class="prog-track" style="height:5px"><div class="prog-fill" id="h-bar" style="width:0%;background:linear-gradient(90deg,#8B2235,#E84040)"></div></div></div>
+        </div>
+        <div class="seg-tracker">
+          <div class="card-tag" style="color:var(--gold)">🌤 TIBIOS</div><div class="card-title">Fit con el perfil</div><div class="card-body" style="margin-bottom:.9rem">Conocen el tema, calentar primero.</div>
+          <div class="tr-row"><div class="tr-label">Identificados</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-wi" style="width:0%"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="wi" value="0" min="0" oninput="updateSeg('w')"></div></div>
+          <div class="tr-row"><div class="tr-label">Contactados</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-wc" style="width:0%"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="wc" value="0" min="0" oninput="updateSeg('w')"></div></div>
+          <div class="tr-row"><div class="tr-label">En el grupo</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-wg" style="width:0%"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="wg" value="0" min="0" oninput="updateSeg('w')"></div></div>
+          <div class="tr-row"><div class="tr-label">Compraron</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-wb" style="width:0%"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="wb" value="0" min="0" oninput="updateSeg('w')"></div></div>
+          <div style="margin-top:.9rem;padding-top:.7rem;border-top:1px solid var(--border)"><div class="prog-header"><span class="prog-label">Conversión</span><span class="prog-pct" id="w-conv" style="color:var(--gold)">0%</span></div><div class="prog-track" style="height:5px"><div class="prog-fill" id="w-bar" style="width:0%"></div></div></div>
+        </div>
+        <div class="seg-tracker">
+          <div class="card-tag" style="color:#6699CC">❄️ FRÍOS</div><div class="card-title">Sin relación previa</div><div class="card-body" style="margin-bottom:.9rem">Dar valor primero. Mayor volumen.</div>
+          <div class="tr-row"><div class="tr-label">Identificados</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-ci" style="width:0%;background:linear-gradient(90deg,#2A4A7A,#6699CC)"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="ci" value="0" min="0" oninput="updateSeg('c')"></div></div>
+          <div class="tr-row"><div class="tr-label">Contactados</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-cc" style="width:0%;background:linear-gradient(90deg,#2A4A7A,#6699CC)"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="cc" value="0" min="0" oninput="updateSeg('c')"></div></div>
+          <div class="tr-row"><div class="tr-label">En el grupo</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-cg" style="width:0%;background:linear-gradient(90deg,#2A4A7A,#6699CC)"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="cg" value="0" min="0" oninput="updateSeg('c')"></div></div>
+          <div class="tr-row"><div class="tr-label">Compraron</div><div class="tr-right"><div class="tr-bar-wrap"><div class="tr-bar" id="b-cb" style="width:0%;background:linear-gradient(90deg,#2A4A7A,#6699CC)"></div></div><input class="inp-num" style="width:60px;font-size:1.1rem" type="number" id="cb" value="0" min="0" oninput="updateSeg('c')"></div></div>
+          <div style="margin-top:.9rem;padding-top:.7rem;border-top:1px solid var(--border)"><div class="prog-header"><span class="prog-label">Conversión</span><span class="prog-pct" id="c-conv" style="color:#6699CC">0%</span></div><div class="prog-track" style="height:5px"><div class="prog-fill" id="c-bar" style="width:0%;background:linear-gradient(90deg,#2A4A7A,#6699CC)"></div></div></div>
+        </div>
+      </div>
+      <div class="card" style="background:rgba(108,99,255,.04);border-color:rgba(108,99,255,.2)">
+        <div class="card-tag" style="color:var(--accent2)">📊 Consolidado total</div>
+        <div class="grid-4" style="margin-top:.6rem">
+          <div><div class="stat-label">Total leads</div><div class="stat-value sv-accent" id="t-leads">0</div></div>
+          <div><div class="stat-label">Total en grupo</div><div class="stat-value" id="t-grupo">0</div></div>
+          <div><div class="stat-label">Total compras</div><div class="stat-value sv-green" id="t-buy">0</div></div>
+          <div><div class="stat-label">Conversión global</div><div class="stat-value sv-gold" id="t-conv">0%</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FASES -->
+    <section id="fases" class="section">
+      <div class="sec-header" style="display:flex;align-items:flex-end;justify-content:space-between">
+        <div><div class="sec-eyebrow">Mapa del lanzamiento</div><h1 class="sec-title">Las <em id="phasesCountLabel">4</em> Fases</h1></div>
+        <button class="btn btn-outline btn-sm" onclick="openPhaseEditor()" style="margin-bottom:.4rem">✏️ Editar fases</button>
+      </div>
+      <div class="phase-nav" id="phaseNav"><!-- rendered by renderPhaseNav() --></div>
+      <div id="phaseContent"></div>
+    </section>
+
+    <!-- MENSAJES -->
+    <section id="mensajes" class="section">
+      <div class="sec-header" style="display:flex;align-items:flex-end;justify-content:space-between">
+        <div><div class="sec-eyebrow">Guiones listos para usar</div><h1 class="sec-title">Mensajes de <em>WhatsApp</em></h1></div>
+        <button class="btn btn-outline btn-sm" onclick="openMsgEditor()" style="margin-bottom:.4rem">✏️ Editar mensajes</button>
+      </div>
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="showTab('t-inv',this)">Invitación grupo</button>
+        <button class="tab-btn" onclick="showTab('t-cal',this)">Calentamiento</button>
+        <button class="tab-btn" onclick="showTab('t-web',this)">Webinar</button>
+        <button class="tab-btn" onclick="showTab('t-close',this)">Cierre</button>
+      </div>
+      <div id="msgArea"></div>
+    </section>
+
+    <!-- OBJECIONES -->
+    <section id="objeciones" class="section">
+      <div class="sec-header" style="display:flex;align-items:flex-end;justify-content:space-between">
+        <div><div class="sec-eyebrow">Respuestas preparadas</div><h1 class="sec-title">Manejo de <em>Objeciones</em></h1></div>
+        <button class="btn btn-outline btn-sm" onclick="openObjEditor()" style="margin-bottom:.4rem">✏️ Editar objeciones</button>
+      </div>
+      <div class="grid-2" id="objArea"></div>
+    </section>
+
+    <!-- TAREAS -->
+    <section id="tareas" class="section">
+      <div class="sec-header" style="display:flex;align-items:flex-end;justify-content:space-between">
+        <div><div class="sec-eyebrow">Rutina diaria · personalizable</div><h1 class="sec-title">Checklist del <em>día</em></h1></div>
+        <button class="btn btn-outline btn-sm" onclick="openDailyEditor()" style="margin-bottom:.4rem">✏️ Editar tareas</button>
+      </div>
+      <div class="grid-2" id="dailyChecklistGrid">
+        <!-- rendered by buildChecklists() -->
+      </div>
+      <div style="margin-top:1.2rem;display:flex;align-items:center;gap:1rem">
+        <button class="btn btn-accent" onclick="resetChecks()">Reiniciar checklist</button>
+        <div style="margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.15em;color:var(--text-dim)">COMPLETADO: <span style="color:var(--accent2);font-family:'Playfair Display',serif;font-size:1.1rem" id="checkCount">0 / 12</span></div>
+      </div>
+    </section>
+
+    <!-- AGENTES IA -->
+    <section id="agentes" class="section">
+      <div class="sec-header"><div class="sec-eyebrow">Nexus Agency · IA en vivo</div><h1 class="sec-title">Agentes de <em>IA</em></h1></div>
+      <div class="card" style="margin-bottom:1.5rem;background:rgba(108,99,255,.04);border-color:rgba(108,99,255,.2)">
+        <div class="card-tag" style="color:var(--accent2)">⚡ IA conectada — conversación en vivo</div>
+        <div class="card-body">Cada agente conoce tu lanzamiento. Haz clic en <strong style="color:var(--accent2)">Consultar ahora</strong> para hablar directamente con el agente, sin salir de esta app.</div>
+      </div>
+      <div class="grid-3" id="agentGrid"></div>
+    </section>
+
+    <!-- REPORTES -->
+    <section id="reportes" class="section">
+      <div class="sec-header"><div class="sec-eyebrow">Exportar y compartir</div><h1 class="sec-title">Reportes del <em>lanzamiento</em></h1></div>
+      <div class="grid-2">
+        <div class="report-card">
+          <div class="report-title">📊 Reporte de Avance</div>
+          <div class="report-sub">Resumen ejecutivo con métricas actuales, proyección y estado de fases. Ideal para compartir con el cliente o socios.</div>
+          <div class="report-preview" id="rp-avance"></div>
+          <div style="display:flex;gap:.8rem">
+            <button class="btn btn-accent" onclick="exportPDF('avance')">⬇ Exportar PDF</button>
+            <button class="btn btn-outline btn-sm" onclick="copyReport('avance')">📋 Copiar texto</button>
+          </div>
+        </div>
+        <div class="report-card">
+          <div class="report-title">💰 Reporte Financiero</div>
+          <div class="report-sub">Proyección de ingresos, comisiones, ritmo de ventas y estimado de cierre. Para análisis interno.</div>
+          <div class="report-preview" id="rp-financiero"></div>
+          <div style="display:flex;gap:.8rem">
+            <button class="btn btn-accent" onclick="exportPDF('financiero')">⬇ Exportar PDF</button>
+            <button class="btn btn-outline btn-sm" onclick="copyReport('financiero')">📋 Copiar texto</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+</div>
+
+<!-- ══ PHASE EDITOR MODAL ══ -->
+<div class="editor-modal-overlay" id="phaseEditorOverlay">
+  <div class="editor-modal">
+    <div class="editor-modal-header">
+      <span>🗺</span>
+      <span class="editor-modal-title">Editar Fases del Lanzamiento</span>
+      <button class="editor-modal-close" onclick="closePhaseEditor()">✕ Cerrar</button>
+    </div>
+    <div class="editor-body" id="phaseEditorBody"><!-- rendered by JS --></div>
+    <div class="editor-footer">
+      <button class="btn btn-outline btn-sm" onclick="closePhaseEditor()">Cancelar</button>
+      <button class="btn btn-accent" onclick="savePhases()">💾 Guardar fases</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DAILY TASKS EDITOR MODAL ══ -->
+<div class="editor-modal-overlay" id="dailyEditorOverlay">
+  <div class="editor-modal">
+    <div class="editor-modal-header">
+      <span>✅</span>
+      <span class="editor-modal-title">Editar Checklist Diario</span>
+      <button class="editor-modal-close" onclick="closeDailyEditor()">✕ Cerrar</button>
+    </div>
+    <div class="editor-body" id="dailyEditorBody"><!-- rendered by JS --></div>
+    <div class="editor-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeDailyEditor()">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveDailyTasks()">💾 Guardar checklist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AI MODAL ══ -->
+<div class="ai-modal-overlay" id="aiModalOverlay">
+  <div class="ai-modal">
+    <div class="ai-modal-header">
+      <span class="ai-modal-icon" id="aiModalIcon">🧠</span>
+      <span class="ai-modal-title" id="aiModalTitle">Agente de Estrategia</span>
+      <button class="ai-modal-close" onclick="closeAiModal()">✕ Cerrar</button>
+    </div>
+    <div class="ai-context-bar" id="aiContextBar">Contexto del lanzamiento cargado automáticamente</div>
+    <div class="ai-quick-prompts" id="aiQuickPrompts"></div>
+    <div class="ai-chat-area" id="aiChatArea"></div>
+    <div class="ai-input-area">
+      <textarea class="ai-input" id="aiInput" placeholder="Escribe tu pregunta al agente..." onkeydown="handleAiKey(event)"></textarea>
+      <button class="ai-send-btn" id="aiSendBtn" onclick="sendAiMessage()">ENVIAR →</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" style="position:fixed;inset:0;background:#0A0A0F;z-index:2000;display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:420px;">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:#fff;letter-spacing:-.02em;">Nexus Agency</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.4em;text-transform:uppercase;color:rgba(240,238,248,.4);margin-top:.4rem;">Launch Command Center · Acceso Privado</div>
+    </div>
+    <div style="display:flex;gap:0;margin-bottom:1.5rem;border:1px solid rgba(108,99,255,.25);overflow:hidden;">
+      <button id="tabLogin" onclick="switchAuthTab('login')" style="flex:1;padding:.7rem;background:rgba(108,99,255,.2);border:none;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;">Iniciar Sesión</button>
+      <button id="tabSignup" onclick="switchAuthTab('signup')" style="flex:1;padding:.7rem;background:transparent;border:none;color:rgba(240,238,248,.4);font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;">Registrarse</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.8rem;">
+      <input id="authEmail" type="email" placeholder="tu@email.com" style="background:rgba(255,255,255,.04);border:1px solid rgba(108,99,255,.3);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:1rem;padding:.75rem 1rem;outline:none;width:100%;" />
+      <input id="authPassword" type="password" placeholder="Contraseña" style="background:rgba(255,255,255,.04);border:1px solid rgba(108,99,255,.3);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:1rem;padding:.75rem 1rem;outline:none;width:100%;" onkeydown="if(event.key==='Enter')handleAuth()" />
+      <button onclick="handleAuth()" style="padding:.85rem;background:#6C63FF;border:none;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#5B52EE'" onmouseout="this.style.background='#6C63FF'">Entrar →</button>
+      <div id="authMsg" style="font-family:'Barlow Condensed',sans-serif;font-size:.75rem;text-align:center;color:#ff6b6b;min-height:1.2rem;"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MSG EDITOR MODAL -->
+<div id="msgEditorOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#111118;border:1px solid rgba(108,99,255,.3);width:min(800px,95vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:1.2rem 1.5rem;border-bottom:1px solid rgba(108,99,255,.2);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#fff;">✏️ Editar Mensajes de WhatsApp</span>
+      <button onclick="closeMsgEditor()" style="background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);padding:.3rem .7rem;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:.1em;">✕ CERRAR</button>
+    </div>
+    <div id="msgEditorBody" style="overflow-y:auto;padding:1.5rem;flex:1;"></div>
+    <div style="padding:1rem 1.5rem;border-top:1px solid rgba(108,99,255,.2);display:flex;justify-content:flex-end;gap:.8rem;">
+      <button onclick="closeMsgEditor()" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="saveMsgEdits()" class="btn btn-accent">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- OBJ EDITOR MODAL -->
+<div id="objEditorOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#111118;border:1px solid rgba(108,99,255,.3);width:min(800px,95vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:1.2rem 1.5rem;border-bottom:1px solid rgba(108,99,255,.2);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#fff;">✏️ Editar Objeciones</span>
+      <button onclick="closeObjEditor()" style="background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);padding:.3rem .7rem;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:.1em;">✕ CERRAR</button>
+    </div>
+    <div id="objEditorBody" style="overflow-y:auto;padding:1.5rem;flex:1;"></div>
+    <div style="padding:1rem 1.5rem;border-top:1px solid rgba(108,99,255,.2);display:flex;justify-content:flex-end;gap:.8rem;">
+      <button onclick="closeObjEditor()" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="saveObjEdits()" class="btn btn-accent">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast">✓ Guardado</div>
+
+<script>
+// ══════════ CONFIG & STATE ══════════
+let cfg = { client:'', program:'', price:197, spots:300, comm:35, partners:1, days:14, niche:'', theme:'purple', id:'' };
+let st  = { cont:0, grupo:0, webinar:0, ventas:0, checks:{}, segs:{h:[0,0,0,0],w:[0,0,0,0],c:[0,0,0,0]} };
+let aiConversation = [];
+let currentAgent = null;
+
+// ══════════ SUPABASE AUTH & STORAGE ══════════
+const SUPA_URL = 'https://hmvduevkpgvkihqfwxnl.supabase.co';
+const SUPA_KEY = 'sb_publishable_jicNZ2mxc5fjicKNKDZrAA_oMU2oNLJ';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+let currentUser = null;
+let authTab = 'login';
+
+function switchAuthTab(tab) {
+  authTab = tab;
+  const isLogin = tab === 'login';
+  document.getElementById('tabLogin').style.background = isLogin ? 'rgba(108,99,255,.2)' : 'transparent';
+  document.getElementById('tabLogin').style.color = isLogin ? '#fff' : 'rgba(240,238,248,.4)';
+  document.getElementById('tabSignup').style.background = !isLogin ? 'rgba(108,99,255,.2)' : 'transparent';
+  document.getElementById('tabSignup').style.color = !isLogin ? '#fff' : 'rgba(240,238,248,.4)';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const msg = document.getElementById('authMsg');
+  if (!email || !pass) { msg.textContent = 'Completa email y contraseña'; return; }
+  msg.textContent = 'Verificando...'; msg.style.color = 'rgba(240,238,248,.5)';
+  const fn = authTab === 'login' ? sb.auth.signInWithPassword({email,password:pass}) : sb.auth.signUp({email,password:pass});
+  const {data, error} = await fn;
+  if (error) { msg.textContent = error.message; msg.style.color = '#ff6b6b'; return; }
+  if (authTab === 'signup') { msg.textContent = '✓ Revisa tu email para confirmar'; msg.style.color = '#4AAA72'; return; }
+  currentUser = data.user;
+  enterDashboard();
+}
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+function enterDashboard() {
+  document.getElementById('authScreen').style.display = 'none';
+  renderSavedClients();
+}
+
+// ── Supabase CRUD ──
+async function saveCurrentState() {
+  if (!cfg.id || !currentUser) return;
+  const payload = { cfg: {...cfg}, st: JSON.parse(JSON.stringify(st)), savedAt: new Date().toISOString() };
+  const { error } = await sb.from('launches').upsert({
+    id: cfg.id,
+    user_id: currentUser.id,
+    client_name: cfg.client,
+    data: payload
+  }, { onConflict: 'id' });
+  if (error) { showToast('⚠ Error al guardar'); console.error(error); return; }
+  showToast('💾 Lanzamiento guardado');
+}
+
+async function getAllClients() {
+  if (!currentUser) return {};
+  const { data, error } = await sb.from('launches').select('id, client_name, data').eq('user_id', currentUser.id);
+  if (error || !data) return {};
+  const clients = {};
+  data.forEach(row => { clients[row.id] = row.data; });
+  return clients;
+}
+
+async function deleteClient(id, e) {
+  e.stopPropagation();
+  if (!confirm('¿Eliminar este lanzamiento?')) return;
+  await sb.from('launches').delete().eq('id', id).eq('user_id', currentUser.id);
+  renderSavedClients();
+}
+
+async function renderSavedClients() {
+  const clients = await getAllClients();
+  const keys = Object.keys(clients);
+  const section = document.getElementById('savedClientsSection');
+  const list = document.getElementById('savedClientsList');
+  if (keys.length === 0) { section.style.display='none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = keys.map(id => {
+    const c = clients[id];
+    return `<div class="saved-chip" onclick="loadAndLaunch('${id}')">
+      <span>${c.cfg.program} · ${c.cfg.client}</span>
+      <span class="del-btn" onclick="deleteClient('${id}',event)">✕</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadAndLaunch(id) {
+  const clients = await getAllClients();
+  if (!clients[id]) return;
+  const data = clients[id];
+  cfg = {...data.cfg};
+  st = data.st || { cont:0, grupo:0, webinar:0, ventas:0, checks:{}, segs:{h:[0,0,0,0],w:[0,0,0,0],c:[0,0,0,0]} };
+  initSetupForm();
+  launchApp(true);
+}
+
+function initSetupForm() {
+  document.getElementById('s-client').value = cfg.client;
+  document.getElementById('s-program').value = cfg.program;
+  document.getElementById('s-price').value = cfg.price;
+  document.getElementById('s-spots').value = cfg.spots;
+  document.getElementById('s-comm').value = cfg.comm;
+  document.getElementById('s-partners').value = cfg.partners;
+  document.getElementById('s-days').value = cfg.days;
+  document.getElementById('s-niche').value = cfg.niche;
+  updateCalc();
+}
+
+// ══════════ SETUP ══════════
+function updateCalc() {
+  const price=+document.getElementById('s-price').value||0;
+  const spots=+document.getElementById('s-spots').value||0;
+  const comm=+document.getElementById('s-comm').value||0;
+  const part=+document.getElementById('s-partners').value||1;
+  document.getElementById('commResult').textContent = '$'+(Math.round((price*spots*(comm/100))/part)).toLocaleString();
+}
+
+function selectColor(el) {
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('selected'));
+  el.classList.add('selected');
+  cfg.theme = el.dataset.theme;
+}
+
+function launchApp(skipRead) {
+  if (!skipRead) {
+    const client=document.getElementById('s-client').value.trim();
+    const program=document.getElementById('s-program').value.trim();
+    if (!client||!program) { showToast('⚠ Completa nombre del cliente y programa'); return; }
+    cfg.client=client; cfg.program=program;
+    cfg.price=+document.getElementById('s-price').value||197;
+    cfg.spots=+document.getElementById('s-spots').value||300;
+    cfg.comm=+document.getElementById('s-comm').value||35;
+    cfg.partners=+document.getElementById('s-partners').value||1;
+    cfg.days=+document.getElementById('s-days').value||14;
+    cfg.niche=document.getElementById('s-niche').value.trim()||'Coaching';
+    cfg.id = cfg.client.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
+    // Reset state for new client
+    st = { cont:0,grupo:0,webinar:0,ventas:0,checks:{},segs:{h:[0,0,0,0],w:[0,0,0,0],c:[0,0,0,0]} };
+  }
+  document.getElementById('setupScreen').style.display='none';
+  document.getElementById('appScreen').style.display='block';
+  document.body.className='t-'+cfg.theme;
+  initApp();
+}
+
+function switchClient() {
+  saveCurrentState();
+  document.getElementById('setupScreen').style.display='flex';
+  document.getElementById('appScreen').style.display='none';
+  renderSavedClients();
+}
+
+function newClient() {
+  saveCurrentState();
+  cfg = { client:'', program:'', price:197, spots:300, comm:35, partners:1, days:14, niche:'', theme:'purple', id:'' };
+  st = { cont:0,grupo:0,webinar:0,ventas:0,checks:{},segs:{h:[0,0,0,0],w:[0,0,0,0],c:[0,0,0,0]} };
+  document.getElementById('s-client').value='';
+  document.getElementById('s-program').value='';
+  document.getElementById('s-price').value=197;
+  document.getElementById('s-spots').value=300;
+  document.getElementById('s-comm').value=35;
+  document.getElementById('s-partners').value=1;
+  document.getElementById('s-days').value=14;
+  document.getElementById('s-niche').value='';
+  updateCalc();
+  document.getElementById('setupScreen').style.display='flex';
+  document.getElementById('appScreen').style.display='none';
+  renderSavedClients();
+}
+
+function initApp() {
+  // Load custom msgs and objs from saved state
+  if (st.editableMsgs) editableMsgs = st.editableMsgs;
+  else editableMsgs = null;
+  if (st.editableObjs) editableObjs = st.editableObjs;
+  else editableObjs = null;
+  document.getElementById('sb-program').textContent=cfg.program;
+  document.getElementById('sb-client').textContent=cfg.client;
+  document.getElementById('sb-niche').textContent=cfg.niche||'Coaching';
+  document.getElementById('daysNum').textContent=cfg.days;
+  document.getElementById('dash-client').textContent=cfg.client;
+  document.getElementById('dash-eyebrow').textContent=cfg.program+' · Lanzamiento activo';
+  document.getElementById('meta-cont').textContent=cfg.spots;
+  document.getElementById('meta-ventas').textContent=cfg.spots;
+  const total=cfg.price*cfg.spots;
+  document.getElementById('proj-total').textContent='$'+total.toLocaleString();
+  document.getElementById('proj-comm').textContent='$'+Math.round(total*(cfg.comm/100)/cfg.partners).toLocaleString();
+  // Restore numbers from state
+  document.getElementById('i-cont').value=st.cont;
+  document.getElementById('i-grupo').value=st.grupo;
+  document.getElementById('i-webinar').value=st.webinar;
+  document.getElementById('i-ventas').value=st.ventas;
+  // Restore segments
+  const segs=st.segs||{h:[0,0,0,0],w:[0,0,0,0],c:[0,0,0,0]};
+  ['hi','hc','hg','hb'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.value=segs.h[i]||0;});
+  ['wi','wc','wg','wb'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.value=segs.w[i]||0;});
+  ['ci','cc','cg','cb'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.value=segs.c[i]||0;});
+  loadPhasesFromState();
+  loadDailyFromState();
+  activePhaseIdx = 1;
+  renderPhaseNav();
+  renderPhase(1); renderMessages(); renderObjeciones(); buildChecklists(); renderAgents(); renderReports();
+  updateDash(); updateSeg('h'); updateSeg('w'); updateSeg('c');
+  saveCurrentState();
+}
+
+// ══════════ NAV ══════════
+function showSec(id, el) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (el) el.classList.add('active');
+  const map={dashboard:'Dashboard General',tracker:'Tracker de Leads',fases:'Fases del Lanzamiento',mensajes:'Mensajes WhatsApp',objeciones:'Manejo de Objeciones',tareas:'Checklist Diario',agentes:'Agentes de IA',reportes:'Reportes'};
+  setTxt('tb-page', cfg.program+' · '+cfg.client);
+  setTxt('tb-title', map[id]||'');
+  if (id==='reportes') renderReports();
+}
+
+// ══════════ DASHBOARD ══════════
+function updateDash() {
+  st.cont=+document.getElementById('i-cont').value||0;
+  st.grupo=+document.getElementById('i-grupo').value||0;
+  st.webinar=+document.getElementById('i-webinar').value||0;
+  st.ventas=+document.getElementById('i-ventas').value||0;
+  renderDash();
+}
+
+function renderDash() {
+  const {cont:c,grupo:g,webinar:w,ventas:v}=st;
+  setTxt('s-cont',c);setTxt('s-grupo',g);setTxt('s-webinar',w);setTxt('s-ventas',v);
+  setBar('b-cont','p-cont',c,cfg.spots);
+  setBar('b-grupo','p-grupo',g,c||1);
+  setBar('b-webinar','p-webinar',w,g||1);
+  setBar('b-ventas','p-ventas',v,cfg.spots);
+  setTxt('recaudado',(v*cfg.price).toLocaleString());
+  setTxt('proj-sold',v);
+  const pct=cfg.spots>0?Math.round((v/cfg.spots)*100):0;
+  setTxt('proj-pct',pct+'%');
+  const pp=Math.min(Math.round((g/150)*100),100);
+  setTxt('phasePct',pp+'%');
+  const pb=document.getElementById('phaseBar');if(pb)pb.style.width=pp+'%';
+  const need=Math.ceil(cfg.spots/(cfg.days||1));
+  const rv=document.getElementById('rhythmVal'),rs=document.getElementById('rhythmSub');
+  if(!rv||!rs)return;
+  if(c===0){rv.className='rhythm-val r-warn';rv.textContent='◦ Sin datos aún';rs.textContent='Ingresa los contactos de hoy para ver tu ritmo.';}
+  else if(c>=need*1.15){rv.className='rhythm-val r-ok';rv.textContent='✦ Ritmo excelente';rs.textContent=`Meta diaria: ~${need}. Vas por encima. ¡Mantén el paso!`;}
+  else if(c>=need*0.8){rv.className='rhythm-val r-ok';rv.textContent='✦ En camino';rs.textContent=`Necesitas ~${need} contactos/día. Vas bien.`;}
+  else{rv.className='rhythm-val r-warn';rv.textContent='⚠ Acelera hoy';rs.textContent=`Hoy necesitas mínimo ${need} para mantener el objetivo de ${cfg.spots} plazas.`;}
+}
+
+function setBar(bId,pId,val,max){
+  const pct=max>0?Math.min(Math.round((val/max)*100),100):0;
+  const b=document.getElementById(bId);if(b)b.style.width=pct+'%';
+  const p=document.getElementById(pId);if(p)p.textContent=pct+'%';
+}
+function setTxt(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+function saveDash(){saveCurrentState();}
+function resetDash(){
+  ['i-cont','i-grupo','i-webinar','i-ventas'].forEach(id=>{document.getElementById(id).value=0;});
+  st.cont=st.grupo=st.webinar=st.ventas=0;renderDash();
+}
+
+// ══════════ SEGMENTS ══════════
+function updateSeg(t){
+  const ids={h:['hi','hc','hg','hb'],w:['wi','wc','wg','wb'],c:['ci','cc','cg','cb']};
+  const bids={h:['b-hi','b-hc','b-hg','b-hb'],w:['b-wi','b-wc','b-wg','b-wb'],c:['b-ci','b-cc','b-cg','b-cb']};
+  const colors={h:'linear-gradient(90deg,#8B2235,#E84040)',w:'linear-gradient(90deg,#9A7A40,#C9A96E)',c:'linear-gradient(90deg,#2A4A7A,#6699CC)'};
+  const vals=ids[t].map(id=>+document.getElementById(id).value||0);
+  if(!st.segs)st.segs={h:[0,0,0,0],w:[0,0,0,0],c:[0,0,0,0]};
+  st.segs[t]=vals;
+  const max=Math.max(vals[0],1);
+  bids[t].forEach((bid,i)=>{const b=document.getElementById(bid);if(b){b.style.width=Math.min((vals[i]/max)*100,100)+'%';b.style.background=colors[t];}});
+  const conv=vals[0]>0?Math.round((vals[3]/vals[0])*100):0;
+  setTxt(`${t}-conv`,conv+'%');
+  const bar=document.getElementById(`${t}-bar`);
+  if(bar){bar.style.width=conv+'%';bar.style.background=colors[t];}
+  const allIds=['hi','wi','ci'],allGrp=['hg','wg','cg'],allBuy=['hb','wb','cb'];
+  const tl=allIds.reduce((a,id)=>a+(+document.getElementById(id).value||0),0);
+  const tg=allGrp.reduce((a,id)=>a+(+document.getElementById(id).value||0),0);
+  const tb=allBuy.reduce((a,id)=>a+(+document.getElementById(id).value||0),0);
+  setTxt('t-leads',tl);setTxt('t-grupo',tg);setTxt('t-buy',tb);
+  setTxt('t-conv',tl>0?Math.round((tb/tl)*100)+'%':'0%');
+}
+
+// ══════════ PHASES — EDITABLE ══════════
+const defaultPhases=[
+  {name:'Prospección',days:'Días 1–5',color:'var(--green-lt)',goal:'Identificar y clasificar todos los contactos en calientes, tibios y fríos. Definir mensaje central con el experto.',tasks:['Exportar todos los contactos de WhatsApp','Clasificar en una hoja: Caliente / Tibio / Frío','Meta: identificar mínimo 400 contactos totales','Definir el mensaje central con el experto','Preparar link y nombre del grupo privado de WA','Acordar cronograma con socios']},
+  {name:'Calentamiento — Grupo WA',days:'Días 6–14',color:'var(--gold)',goal:'Llenar el grupo con mínimo 150 personas y generar engagement real antes del webinar.',tasks:['Enviar invitaciones: calientes → tibios → fríos','Publicar contenido de valor cada 2 días en el grupo','Hacer pregunta de "¿cuál es tu mayor reto?" en día 2','Compartir testimonio de alumna real en día 5','Publicar "¿quién estará en el live?" 3 días antes','Registro diario de entradas al grupo']},
+  {name:'Webinar en Vivo',days:'Día del webinar',color:'var(--accent2)',goal:'Presentar el método, generar deseo y abrir el carrito en vivo con urgencia real.',tasks:['Recordatorio al grupo 1 día antes','Recordatorio 1 hora antes con link','Abrir carrito en los últimos 15 min del webinar','Post-webinar: mensaje de plazas abiertas inmediato','Activar seguimiento 1:1 con las dudas','Notificar al closer para activar su flujo']},
+  {name:'Carrito Abierto',days:'Días post-webinar · 1 semana',color:'var(--accent)',goal:'Cerrar las plazas. Gestionar objeciones, seguimiento activo y urgencia de cierre.',tasks:['Mensaje de carrito abierto post-webinar inmediato','Seguimiento 1:1 a quienes preguntaron o dudaron','Mensaje de "quedan X plazas" a mitad de semana','Urgencia final 24h antes del cierre','Cerrar conversaciones pendientes antes del deadline','Cerrar carrito exactamente a la hora prometida']}
+];
+
+let phases = JSON.parse(JSON.stringify(defaultPhases)); // working copy
+let activePhaseIdx = 0;
+
+function loadPhasesFromState() {
+  if (st.phases && st.phases.length > 0) phases = JSON.parse(JSON.stringify(st.phases));
+  else phases = JSON.parse(JSON.stringify(defaultPhases));
+}
+
+function setPhase(i) {
+  activePhaseIdx = i;
+  document.querySelectorAll('.phase-btn').forEach((el,idx)=>{
+    el.className='phase-btn'+(idx<i?' done':idx===i?' active':'');
+  });
+  renderPhase(i);
+}
+
+function renderPhaseNav() {
+  const nav = document.getElementById('phaseNav');
+  if (!nav) return;
+  const statusIcons = phases.map((_,i) => i < activePhaseIdx ? '✓ ' : i === activePhaseIdx ? '→ ' : '');
+  nav.innerHTML = phases.map((p,i) => `
+    <div class="phase-btn ${i < activePhaseIdx ? 'done' : i === activePhaseIdx ? 'active' : ''}" onclick="setPhase(${i})">
+      <div class="pb-num">${statusIcons[i]}Fase ${i+1}</div>
+      <div class="pb-name">${p.name}</div>
+      <div class="pb-days">${p.days}</div>
+    </div>`).join('');
+  const lbl = document.getElementById('phasesCountLabel');
+  if (lbl) lbl.textContent = phases.length;
+}
+
+function renderPhase(i) {
+  const p = phases[i];
+  if (!p) return;
+  document.getElementById('phaseContent').innerHTML = `
+    <div class="grid-2">
+      <div class="card" style="border-color:${p.color}33">
+        <div class="card-tag" style="color:${p.color}">🎯 Objetivo</div>
+        <div class="card-title">${p.name}</div>
+        <div class="card-body" style="margin-bottom:1rem">${p.goal}</div>
+        <div style="padding:.7rem .9rem;background:rgba(255,255,255,.02);border-left:3px solid ${p.color};font-size:.72rem;color:var(--text-mid)">📅 ${p.days}</div>
+      </div>
+      <div class="card">
+        <div class="card-tag" style="color:var(--accent2)">✅ Tareas de la fase</div>
+        <div class="checklist">
+          ${p.tasks.map(t => `<div class="check-item" onclick="this.classList.toggle('done')"><div class="check-box"><span class="check-mark">✓</span></div><div class="check-text">${t}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Phase Editor ──
+function openPhaseEditor() {
+  renderPhaseEditorBody();
+  document.getElementById('phaseEditorOverlay').classList.add('open');
+}
+function closePhaseEditor() {
+  document.getElementById('phaseEditorOverlay').classList.remove('open');
+}
+
+const phaseColors = ['var(--green-lt)','var(--gold)','var(--accent2)','var(--accent)','#E84040','#6699CC','#C9A96E','#4AAA72'];
+
+function renderPhaseEditorBody() {
+  const body = document.getElementById('phaseEditorBody');
+  body.innerHTML = `
+    <div style="font-size:.72rem;color:var(--text-dim);margin-bottom:1rem;line-height:1.6">
+      Edita el nombre, días, objetivo y tareas de cada fase. Añade o elimina fases según tu lanzamiento.
+    </div>
+    <div class="phase-editor-list" id="peList">
+      ${phases.map((p, i) => renderPhaseEditorItem(p, i)).join('')}
+    </div>
+    <button class="add-phase-btn" onclick="addPhase()">＋ Añadir nueva fase</button>
+  `;
+}
+
+function renderPhaseEditorItem(p, i) {
+  const colorOpts = phaseColors.map((c,ci) => `<span onclick="setPEColor(${i},${ci})" style="width:18px;height:18px;border-radius:50%;background:${c};display:inline-block;cursor:pointer;border:2px solid ${p.color===c?'#fff':'transparent'};margin-right:4px;vertical-align:middle;transition:all .2s"></span>`).join('');
+  return `<div class="phase-editor-item" id="pe-item-${i}">
+    <div class="phase-editor-header" onclick="togglePEItem(${i})">
+      <span class="phase-editor-handle">⠿</span>
+      <span class="phase-editor-num">FASE ${i+1}</span>
+      <span class="phase-editor-name-display" id="pe-name-display-${i}">${p.name}</span>
+      <span class="phase-editor-toggle" id="pe-toggle-${i}">▾</span>
+    </div>
+    <div class="phase-editor-body" id="pe-body-${i}">
+      <div class="editor-field">
+        <div class="editor-label">Nombre de la fase</div>
+        <input class="editor-input" id="pe-name-${i}" value="${p.name}" oninput="document.getElementById('pe-name-display-${i}').textContent=this.value" placeholder="Ej: Calentamiento">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+        <div class="editor-field">
+          <div class="editor-label">Días / período</div>
+          <input class="editor-input" id="pe-days-${i}" value="${p.days}" placeholder="Ej: Días 1–5">
+        </div>
+        <div class="editor-field">
+          <div class="editor-label">Color</div>
+          <div style="padding:.4rem 0">${colorOpts}</div>
+        </div>
+      </div>
+      <div class="editor-field">
+        <div class="editor-label">Objetivo de la fase</div>
+        <textarea class="editor-textarea" id="pe-goal-${i}" placeholder="Describe el objetivo principal de esta fase...">${p.goal}</textarea>
+      </div>
+      <div class="editor-field">
+        <div class="editor-label">Tareas</div>
+        <div class="task-list" id="pe-tasks-${i}">
+          ${p.tasks.map((t,ti) => `<div class="task-item">
+            <input class="task-item-input" value="${t}" placeholder="Escribe una tarea..." id="pe-task-${i}-${ti}">
+            <button class="task-del-btn" onclick="removeTask(${i},${ti})">✕</button>
+          </div>`).join('')}
+        </div>
+        <button class="add-task-btn" onclick="addTask(${i})">＋ Añadir tarea</button>
+      </div>
+      <div class="phase-actions">
+        ${i > 0 ? `<button class="btn btn-outline btn-sm" onclick="movePhase(${i},-1)">↑ Subir</button>` : ''}
+        ${i < phases.length-1 ? `<button class="btn btn-outline btn-sm" onclick="movePhase(${i},1)">↓ Bajar</button>` : ''}
+        ${phases.length > 1 ? `<button class="phase-del-btn" onclick="deletePhase(${i})">🗑 Eliminar fase</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function togglePEItem(i) {
+  const body = document.getElementById(`pe-body-${i}`);
+  const toggle = document.getElementById(`pe-toggle-${i}`);
+  const isOpen = body.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.phase-editor-body').forEach(b=>b.classList.remove('open'));
+  document.querySelectorAll('.phase-editor-toggle').forEach(t=>t.classList.remove('open'));
+  if (!isOpen) { body.classList.add('open'); toggle.classList.add('open'); }
+}
+
+function setPEColor(phaseIdx, colorIdx) {
+  phases[phaseIdx].color = phaseColors[colorIdx];
+  renderPhaseEditorBody();
+  togglePEItem(phaseIdx);
+}
+
+function addTask(phaseIdx) {
+  // Read current values before re-render
+  readPEValues();
+  phases[phaseIdx].tasks.push('');
+  renderPhaseEditorBody();
+  togglePEItem(phaseIdx);
+  // Focus last task
+  setTimeout(()=>{
+    const tasks = document.querySelectorAll(`#pe-tasks-${phaseIdx} .task-item-input`);
+    if (tasks.length) tasks[tasks.length-1].focus();
+  }, 50);
+}
+
+function removeTask(phaseIdx, taskIdx) {
+  readPEValues();
+  phases[phaseIdx].tasks.splice(taskIdx, 1);
+  renderPhaseEditorBody();
+  togglePEItem(phaseIdx);
+}
+
+function addPhase() {
+  readPEValues();
+  phases.push({
+    name: 'Nueva fase',
+    days: 'Días ' + (phases.length+1),
+    color: phaseColors[phases.length % phaseColors.length],
+    goal: 'Describe el objetivo de esta fase.',
+    tasks: ['Primera tarea de esta fase']
+  });
+  renderPhaseEditorBody();
+  setTimeout(()=>togglePEItem(phases.length-1), 50);
+}
+
+function deletePhase(i) {
+  if (!confirm(`¿Eliminar "${phases[i].name}"?`)) return;
+  readPEValues();
+  phases.splice(i, 1);
+  if (activePhaseIdx >= phases.length) activePhaseIdx = phases.length - 1;
+  renderPhaseEditorBody();
+}
+
+function movePhase(i, dir) {
+  readPEValues();
+  const j = i + dir;
+  if (j < 0 || j >= phases.length) return;
+  [phases[i], phases[j]] = [phases[j], phases[i]];
+  renderPhaseEditorBody();
+  togglePEItem(j);
+}
+
+function readPEValues() {
+  phases.forEach((p, i) => {
+    const nameEl = document.getElementById(`pe-name-${i}`);
+    const daysEl = document.getElementById(`pe-days-${i}`);
+    const goalEl = document.getElementById(`pe-goal-${i}`);
+    if (nameEl) p.name = nameEl.value;
+    if (daysEl) p.days = daysEl.value;
+    if (goalEl) p.goal = goalEl.value;
+    // Read tasks
+    const taskInputs = document.querySelectorAll(`#pe-tasks-${i} .task-item-input`);
+    if (taskInputs.length) p.tasks = Array.from(taskInputs).map(inp => inp.value).filter(v => v.trim());
+  });
+}
+
+function savePhases() {
+  readPEValues();
+  st.phases = JSON.parse(JSON.stringify(phases));
+  saveCurrentState();
+  renderPhaseNav();
+  setPhase(Math.min(activePhaseIdx, phases.length-1));
+  closePhaseEditor();
+  showToast('✓ Fases guardadas');
+}
+
+
+// ══════════ MESSAGES ══════════
+let editableMsgs = null; // loaded from state or defaults
+const defaultMsgs={
+  'Invitación Grupo':[
+    {title:'🔥 Invitación — Caliente',seg:'hot',note:'Objetivo único: que entre al grupo. No menciones precio ni fecha.',text:`Hola [nombre]! 👋 ¿Cómo estás?\n\nTe escribo porque [EXPERTO] está preparando algo muy especial y pensé en ti inmediatamente. Antes del lanzamiento ha armado un grupo privado de WhatsApp con contenido exclusivo.\n\n¿Te animas a entrar? Solo son personas seleccionadas 🙌`},
+    {title:'🌤 Invitación — Tibio',seg:'warm',note:'"Nada de spam" elimina la objeción principal.',text:`Hola [nombre]! Soy [TU NOMBRE], trabajo con [EXPERTO] en [NICHO].\n\nEstamos formando un grupo privado de WhatsApp antes de un lanzamiento exclusivo. Contenido de valor real — nada de spam 😊\n\n¿Te gustaría entrar?`},
+    {title:'❄️ Invitación — Frío',seg:'cold',note:'"Sin compromiso" y "sin costo" son las dos palabras que más reducen fricción.',text:`Hola [nombre]! Disculpa si no nos conocemos mucho — soy [TU NOMBRE].\n\nVi que tienes interés en [NICHO] y quería avisarte: [EXPERTO] está regalando contenido exclusivo en un grupo cerrado de WhatsApp esta semana.\n\nSin costo, sin compromiso. ¿Quieres que te comparta el link?`}
+  ],
+  'Calentamiento':[
+    {title:'💬 Calentamiento — Día 2 (pregunta)',seg:'all',note:'La pregunta abierta genera interacción y te da los dolores reales para el webinar.',text:`Hola a todas! 🙌\n\nMe alegra que estén aquí. Esta semana compartiré contenido que normalmente solo doy a mis alumnas de pago.\n\nUna pregunta para empezar: ¿Cuál es HOY tu mayor reto con [TEMA]? 👇`},
+    {title:'💬 Calentamiento — Día 5 (prueba social)',seg:'all',note:'Prueba social + emoción. Genera el mayor engagement antes del webinar.',text:`Quiero compartirles algo que me llegó esta semana 🥹\n\nUna alumna me escribió: "[TESTIMONIO REAL]"\n\nEso es exactamente por lo que hago esto. No es solo [TEMA] — es demostrarte que puedes más de lo que crees.\n\n¿Alguna de ustedes ha tenido ese momento de "no puedo" que luego se convirtió en "lo hice"? 👇`}
+  ],
+  'Webinar':[
+    {title:'🔴 Anuncio webinar — 3 días antes',seg:'all',note:'Genera anticipación sin revelar que es una venta.',text:`Chicas, tengo algo importante que contarles 🎉\n\nEl [DÍA Y FECHA] a las [HORA] haré una sesión en vivo SOLO para las personas de este grupo.\n\n📌 Guarda la fecha: [DÍA] · [HORA]\n\n¿Quién estará ahí? Pongan su 🙋‍♀️ aquí.`},
+    {title:'⏰ Recordatorio — 1 hora antes',seg:'all',note:'Corto y directo. "No se va a repetir" activa la urgencia de estar en vivo.',text:`¡En 1 hora nos vemos! ⏰🔥\n\n👉 [LINK DEL WEBINAR]\n\nEstén puntuales — empezamos a la hora y el contenido de hoy no se va a repetir.\n\n¡Las espero! 🙌`}
+  ],
+  'Cierre':[
+    {title:'🛒 Post-webinar — Carrito abierto',seg:'all',note:'"Escríbeme aquí" activa conversaciones 1:1 con leads calientes.',text:`Gracias por el webinar de hoy 🙏\n\nComo prometí, las plazas para [PROGRAMA] están abiertas por primera vez — solo por esta semana.\n\n👉 [LINK DE PAGO]\n\nSon [PLAZAS] plazas a $[PRECIO]. Si tienes alguna duda, escríbeme aquí directamente ❤️`},
+    {title:'⚡ Urgencia final — 24h antes del cierre',seg:'hot',note:'Este mensaje genera el mayor pico de ventas.',text:`Último aviso 🚨\n\nMañana a las [HORA] cierro definitivamente las plazas de [PROGRAMA]. Quedan [X] disponibles.\n\nSi estás dudando, pregúntame lo que sea ahora mismo.\n\n👉 [LINK]\n\nEl programa no vuelve hasta [AÑO]. 🔒`}
+  ]
+};
+const msgKeys=['Invitación Grupo','Calentamiento','Webinar','Cierre'];
+function getMsgs() { return editableMsgs || defaultMsgs; }
+function renderMessages(tab){
+  const key=msgKeys[tab===undefined?0:tab];
+  const items=getMsgs()[key];
+  const segLabel={hot:'Caliente',warm:'Tibio',cold:'Frío',all:'Grupo'};
+  document.getElementById('msgArea').innerHTML=items.map((m,i)=>`<div class="wa-card"><div class="wa-head"><span class="wa-head-title">${m.title}</span><span class="wa-seg seg-${m.seg}">${segLabel[m.seg]}</span></div><div class="wa-body"><div class="bubble" id="msg-${tab||0}-${i}">${m.text.replace(/\n/g,'<br>')}</div><div class="wa-note">💡 ${m.note}</div><button class="copy-btn" onclick="copyMsg('msg-${tab||0}-${i}',this)">📋 Copiar mensaje</button></div></div>`).join('');
+}
+function showTab(id,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const idx=['t-inv','t-cal','t-web','t-close'].indexOf(id);renderMessages(idx);}
+function copyMsg(id,btn){const el=document.getElementById(id);const text=el?el.innerText:'';navigator.clipboard.writeText(text).then(()=>{btn.classList.add('copied');btn.textContent='✓ Copiado!';showToast('✓ Mensaje copiado');setTimeout(()=>{btn.classList.remove('copied');btn.textContent='📋 Copiar mensaje';},2500);});}
+
+// ══════════ OBJECIONES ══════════
+let editableObjs = null;
+const defaultObjs=[
+  {e:'💸',t:'"¿Cuánto cuesta?"',when:'Antes del webinar, cuando preguntan precio',r:'Todavía no se ha anunciado el precio oficial — es parte de la sorpresa del evento 😊 Lo que sí te puedo decir es que solo las personas del grupo van a tener acceso primero. ¿Puedes estar en el live el [día]?'},
+  {e:'⏰',t:'"No tengo tiempo"',when:'Para entrar al grupo o asistir al webinar',r:'Entiendo perfectamente. El grupo es 100% opcional — nadie te va a bombardear. Y el webinar dura menos de 60 min. ¿Te animas igual?'},
+  {e:'🤔',t:'"Lo pienso"',when:'Después de presentar el programa',r:'Claro, es una decisión. ¿Puedo preguntarte qué es exactamente lo que necesitas evaluar? A veces hay info que puedo darte ahora mismo y te ahorra el tiempo de pensar.'},
+  {e:'💰',t:'"Es caro"',when:'Cuando se anuncia el precio post-webinar',r:'Entiendo. ¿Cuánto has invertido en los últimos 12 meses en cosas que no te dieron resultado? Este programa es $[PRECIO] por [SEMANAS] semanas de transformación real. ¿Cuánto vale eso para ti?'},
+  {e:'😟',t:'"Compré cursos y no los termino"',when:'Objeción clásica de compradores seriales',r:'Eso me lo dicen mucho y es válido. ¿Qué fue lo que te hizo abandonar los anteriores? Según tu respuesta te digo con honestidad si [PROGRAMA] es diferente para ti o no.'},
+  {e:'🙈',t:'No responde (silencio)',when:'2 días sin respuesta a un mensaje',r:'Hola [nombre] 👋 Solo quiero asegurarme de que te llegó mi mensaje. Si no es el momento o no te interesa, sin problema — solo dímelo y no te molesto más. ¿Todo bien?'}
+];
+function getObjs(){return editableObjs||defaultObjs;}
+function renderObjeciones(){document.getElementById('objArea').innerHTML=getObjs().map(o=>`<div class="obj-card"><div class="obj-head"><span class="obj-emoji">${o.e}</span><span class="obj-title">${o.t}</span></div><div class="obj-body"><div class="obj-trigger">⚡ Cuándo: ${o.when}</div><div class="obj-resp">${o.r}</div><button class="copy-btn" style="width:100%;justify-content:center;margin-top:.8rem" onclick="copyText(\`${o.r.replace(/`/g,"'")}\`,this)">📋 Copiar respuesta</button></div></div>`).join('');}
+function copyText(t,btn){navigator.clipboard.writeText(t).then(()=>{btn.classList.add('copied');btn.textContent='✓ Copiado!';showToast('✓ Respuesta copiada');setTimeout(()=>{btn.classList.remove('copied');btn.textContent='📋 Copiar respuesta';},2500);});}
+
+
+// ══════════ DAILY CHECKLIST — EDITABLE ══════════
+const defaultDailySections = [
+  {id:'am', icon:'☀️', title:'Mañana · 20 min', subtitle:'Nuevos contactos', tasks:['Enviar 10 invitaciones al grupo (calientes primero)','Registrar quién respondió de ayer','Revisar nuevas entradas al grupo WA']},
+  {id:'noon', icon:'🌞', title:'Mediodía · 15 min', subtitle:'Respuestas activas', tasks:['Responder todas las conversaciones abiertas','Avanzar flujo: preguntar → invitar → webinar','Marcar estado de cada lead en el tracker']},
+  {id:'pm', icon:'🌆', title:'Tarde · 10 min', subtitle:'Seguimiento', tasks:['Revisar quién no respondió en 48h','Enviar toque 2 si aplica (máx. 3 toques totales)','Archivar los que llevan 3 intentos sin respuesta']},
+  {id:'eod', icon:'📊', title:'Fin del día · 5 min', subtitle:'Registro y reporte', tasks:['Actualizar números en el dashboard','Registrar objeciones nuevas del día','Enviar reporte de avance a socios']}
+];
+
+let dailySections = JSON.parse(JSON.stringify(defaultDailySections));
+
+function loadDailyFromState() {
+  if (st.dailySections && st.dailySections.length > 0) dailySections = JSON.parse(JSON.stringify(st.dailySections));
+  else dailySections = JSON.parse(JSON.stringify(defaultDailySections));
+}
+
+function buildChecklists() {
+  const grid = document.getElementById('dailyChecklistGrid');
+  if (!grid) return;
+  // Layout: 2 columns, sections split evenly
+  const half = Math.ceil(dailySections.length / 2);
+  const col1 = dailySections.slice(0, half);
+  const col2 = dailySections.slice(half);
+
+  const renderSection = (sec, idx) => `
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-tag" style="color:var(--accent2)">${sec.icon} ${sec.title}</div>
+      <div class="card-title">${sec.subtitle}</div>
+      <div class="checklist" id="cl-${idx}">
+        ${sec.tasks.map((t,ti) => `<div class="check-item ${st.checks[`cl-${idx}-${ti}`]?'done':''}" onclick="toggleCheck('cl-${idx}-${ti}',this)">
+          <div class="check-box"><span class="check-mark">✓</span></div>
+          <div class="check-text">${t}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+
+  grid.innerHTML = `
+    <div>${col1.map((s,i)=>renderSection(s,i)).join('')}</div>
+    <div>${col2.map((s,i)=>renderSection(s,i+half)).join('')}</div>`;
+
+  updateCheckCount();
+}
+
+function toggleCheck(key,el){el.classList.toggle('done');st.checks[key]=el.classList.contains('done');updateCheckCount();}
+function updateCheckCount(){
+  const total = dailySections.reduce((a,s)=>a+s.tasks.length,0);
+  const done = Object.values(st.checks).filter(Boolean).length;
+  setTxt('checkCount',`${done} / ${total}`);
+}
+function resetChecks(){st.checks={};buildChecklists();}
+
+// ── Daily Editor ──
+function openDailyEditor() {
+  renderDailyEditorBody();
+  document.getElementById('dailyEditorOverlay').classList.add('open');
+}
+function closeDailyEditor() {
+  document.getElementById('dailyEditorOverlay').classList.remove('open');
+}
+
+function renderDailyEditorBody() {
+  const body = document.getElementById('dailyEditorBody');
+  body.innerHTML = `
+    <div style="font-size:.72rem;color:var(--text-dim);margin-bottom:1rem;line-height:1.6">
+      Personaliza los bloques de tiempo y sus tareas. Añade nuevos bloques o elimina los que no necesites.
+    </div>
+    <div id="deList">
+      ${dailySections.map((s,i) => renderDailyEditorItem(s,i)).join('')}
+    </div>
+    <button class="add-phase-btn" onclick="addDailySection()">＋ Añadir bloque de tiempo</button>
+  `;
+}
+
+function renderDailyEditorItem(s, i) {
+  return `<div class="daily-section-editor">
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;gap:.7rem;margin-bottom:.8rem;align-items:center">
+      <input class="editor-input" id="de-icon-${i}" value="${s.icon}" placeholder="☀️" style="text-align:center;font-size:1.1rem;padding:.3rem">
+      <div>
+        <div class="editor-label" style="margin-bottom:.25rem">Título del bloque</div>
+        <input class="daily-section-title-input" id="de-title-${i}" value="${s.title}" placeholder="Mañana · 20 min">
+      </div>
+      <div>
+        <div class="editor-label" style="margin-bottom:.25rem">Subtítulo</div>
+        <input class="daily-section-title-input" id="de-sub-${i}" value="${s.subtitle}" placeholder="Nuevos contactos">
+      </div>
+    </div>
+    <div class="editor-label" style="margin-bottom:.35rem">Tareas</div>
+    <div class="task-list" id="de-tasks-${i}">
+      ${s.tasks.map((t,ti) => `<div class="task-item">
+        <input class="task-item-input" id="de-task-${i}-${ti}" value="${t}" placeholder="Escribe una tarea...">
+        <button class="task-del-btn" onclick="removeDailyTask(${i},${ti})">✕</button>
+      </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:.5rem;margin-top:.7rem;align-items:center">
+      <button class="add-task-btn" style="width:auto;flex:1" onclick="addDailyTask(${i})">＋ Añadir tarea</button>
+      ${dailySections.length > 1 ? `<button class="phase-del-btn" onclick="deleteDailySection(${i})">🗑 Eliminar bloque</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function addDailySection() {
+  readDEValues();
+  dailySections.push({ id: 'custom_'+Date.now(), icon: '⚡', title: 'Nuevo bloque', subtitle: 'Tareas personalizadas', tasks: ['Primera tarea'] });
+  renderDailyEditorBody();
+}
+
+function deleteDailySection(i) {
+  if (!confirm(`¿Eliminar el bloque "${dailySections[i].title}"?`)) return;
+  readDEValues();
+  dailySections.splice(i, 1);
+  renderDailyEditorBody();
+}
+
+function addDailyTask(i) {
+  readDEValues();
+  dailySections[i].tasks.push('');
+  renderDailyEditorBody();
+  setTimeout(()=>{
+    const inputs = document.querySelectorAll(`#de-tasks-${i} .task-item-input`);
+    if (inputs.length) inputs[inputs.length-1].focus();
+  }, 50);
+}
+
+function removeDailyTask(i, ti) {
+  readDEValues();
+  dailySections[i].tasks.splice(ti, 1);
+  renderDailyEditorBody();
+}
+
+function readDEValues() {
+  dailySections.forEach((s, i) => {
+    const icon = document.getElementById(`de-icon-${i}`);
+    const title = document.getElementById(`de-title-${i}`);
+    const sub = document.getElementById(`de-sub-${i}`);
+    if (icon) s.icon = icon.value;
+    if (title) s.title = title.value;
+    if (sub) s.subtitle = sub.value;
+    const taskInputs = document.querySelectorAll(`#de-tasks-${i} .task-item-input`);
+    if (taskInputs.length) s.tasks = Array.from(taskInputs).map(inp => inp.value).filter(v => v.trim());
+  });
+}
+
+function saveDailyTasks() {
+  readDEValues();
+  st.dailySections = JSON.parse(JSON.stringify(dailySections));
+  st.checks = {};
+  saveCurrentState();
+  buildChecklists();
+  closeDailyEditor();
+  showToast('✓ Checklist guardado');
+}
+
+
+// ══════════ AI AGENTS ══════════
+const agentDefs=[
+  {key:'estrategia',name:'Agente de Estrategia',icon:'🧠',role:'Diseña la estrategia del lanzamiento, define mensajes centrales y detecta oportunidades según tu contexto específico.',status:'active',
+   system:`Eres el Agente de Estrategia de Nexus Agency, especializado en lanzamientos de programas online en el mercado hispanohablante. Conoces el método de lanzamiento de grupos de WhatsApp con webinar.`,
+   prompts:['¿Cuál debería ser mi mensaje central para este lanzamiento?','¿Qué segmento priorizar primero?','¿Cómo mejorar mi tasa de conversión actual?','Analiza mis números y dame recomendaciones']},
+  {key:'contenido',name:'Agente de Contenido WA',icon:'✍️',role:'Genera mensajes de calentamiento, guiones personalizados e ideas de contenido para el grupo privado de WhatsApp.',status:'active',
+   system:`Eres el Agente de Contenido de Nexus Agency. Especializas en crear mensajes de WhatsApp auténticos y persuasivos para lanzamientos online. Tono cercano, humano, nunca salesy.`,
+   prompts:['Escribe 3 mensajes de calentamiento para el grupo','Adapta el mensaje de invitación para mi nicho','Escribe un mensaje de urgencia para el último día','Dame ideas de contenido de valor para el grupo']},
+  {key:'ventas',name:'Agente de Ventas / Closer',icon:'🎯',role:'Genera argumentos de cierre, respuestas a objeciones y scripts de conversación 1:1 para el período de carrito abierto.',status:'active',
+   system:`Eres el Agente de Ventas de Nexus Agency. Especializas en cierre de ventas empático, manejo de objeciones y scripts de conversación para lanzamientos de programas online en WhatsApp.`,
+   prompts:['Dame el mejor argumento de cierre para mi programa','¿Cómo responder a "necesito consultarlo con mi pareja"?','Script para seguimiento después del webinar','¿Cómo crear urgencia sin presionar?']},
+  {key:'analisis',name:'Agente de Análisis',icon:'📊',role:'Analiza tus métricas actuales, detecta cuellos de botella y te dice exactamente qué ajustar para mejorar resultados.',status:'active',
+   system:`Eres el Agente de Análisis de Nexus Agency. Interpretas métricas de lanzamientos online, detectas cuellos de botella en el funnel y propones acciones concretas. Siempre basas tus respuestas en datos.`,
+   prompts:['Analiza mis métricas actuales','¿Dónde está el cuello de botella en mi funnel?','¿Voy en buen ritmo para cumplir mi meta?','Proyecta cuántas ventas voy a cerrar']},
+  {key:'prospeccion',name:'Agente de Prospección',icon:'🔍',role:'Clasifica contactos, sugiere cómo priorizar tu base de datos y define criterios de segmentación para tu lanzamiento.',status:'active',
+   system:`Eres el Agente de Prospección de Nexus Agency. Ayudas a clasificar contactos de WhatsApp en calientes/tibios/fríos y defines estrategias de outreach para lanzamientos.`,
+   prompts:['¿Cómo clasificar mis contactos de WhatsApp?','Tengo X contactos tibios, ¿cómo abordarlos?','¿Cuántos contactos necesito para llegar a mi meta?','Define criterios de caliente/tibio/frío para mi nicho']},
+  {key:'objeciones',name:'Agente de Objeciones',icon:'🛡',role:'Genera respuestas personalizadas a objeciones específicas usando el contexto de tu lead y tu programa.',status:'idle',
+   system:`Eres el Agente de Objeciones de Nexus Agency. Especializas en generar respuestas empáticas y efectivas a objeciones en ventas de programas online. Nunca suenas agresivo ni presionas.`,
+   prompts:['Un lead dijo "es mucho dinero", ¿qué respondo?','Un lead no responde hace 3 días, ¿qué hago?','"Ya compré otro programa" — ¿cómo manejo esto?','Genera 5 formas distintas de manejar "lo pienso"']}
+];
+
+function renderAgents(){
+  const stL={active:'🟢 Activo',pending:'🟡 En preparación',idle:'⚫ En espera'};
+  const stC={active:'as-active',pending:'as-pending',idle:'as-idle'};
+  document.getElementById('agentGrid').innerHTML=agentDefs.map(a=>`
+    <div class="agent-card">
+      <div class="agent-status ${stC[a.status]}">${stL[a.status]}</div>
+      <div class="agent-name">${a.icon} ${a.name}</div>
+      <div class="agent-role">${a.role}</div>
+      <button class="btn btn-accent" style="width:100%;margin-top:.8rem" onclick="openAgent('${a.key}')">⚡ Consultar ahora</button>
+    </div>`).join('');
+}
+
+function openAgent(key) {
+  const agent = agentDefs.find(a=>a.key===key);
+  if (!agent) return;
+  currentAgent = agent;
+  aiConversation = [];
+  document.getElementById('aiModalIcon').textContent = agent.icon;
+  document.getElementById('aiModalTitle').textContent = agent.name;
+  document.getElementById('aiContextBar').textContent = `📋 Contexto: ${cfg.program} · ${cfg.client} · ${cfg.niche} · ${st.ventas}/${cfg.spots} ventas · ${cfg.price} USD`;
+  document.getElementById('aiChatArea').innerHTML = `<div class="ai-msg assistant"><div class="msg-name">${agent.name}</div>Hola! Soy tu ${agent.name} para el lanzamiento de <strong>${cfg.program}</strong> con ${cfg.client}. Tengo acceso a todos los datos de tu lanzamiento. ¿En qué te ayudo?</div>`;
+  const qp = document.getElementById('aiQuickPrompts');
+  qp.innerHTML = agent.prompts.map(p=>`<button class="ai-quick-btn" onclick="quickPrompt(\`${p.replace(/`/g,"'")}\`)">${p}</button>`).join('');
+  document.getElementById('aiModalOverlay').classList.add('open');
+  document.getElementById('aiInput').focus();
+}
+
+function closeAiModal(){document.getElementById('aiModalOverlay').classList.remove('open');}
+
+function quickPrompt(text){document.getElementById('aiInput').value=text;sendAiMessage();}
+
+function handleAiKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAiMessage();}}
+
+async function sendAiMessage(){
+  const input=document.getElementById('aiInput');
+  const text=input.value.trim();
+  if(!text||!currentAgent)return;
+  input.value='';
+  const sendBtn=document.getElementById('aiSendBtn');
+  sendBtn.disabled=true;
+  // Add user message
+  const chatArea=document.getElementById('aiChatArea');
+  chatArea.innerHTML+=`<div class="ai-msg user">${text}</div>`;
+  chatArea.innerHTML+=`<div class="ai-msg assistant thinking" id="thinking-msg"><div class="msg-name">${currentAgent.name}</div>Analizando tu lanzamiento...</div>`;
+  chatArea.scrollTop=chatArea.scrollHeight;
+  // Build context
+  const launchContext=`CONTEXTO DEL LANZAMIENTO:
+- Cliente: ${cfg.client}
+- Programa: ${cfg.program}
+- Nicho: ${cfg.niche}
+- Precio: $${cfg.price} USD
+- Meta de plazas: ${cfg.spots}
+- Tu comisión: ${cfg.comm}% (${cfg.partners} socios)
+- Días al webinar: ${cfg.days}
+- Contactados: ${st.cont}
+- En grupo WA: ${st.grupo}
+- Registrados webinar: ${st.webinar}
+- Ventas cerradas: ${st.ventas}
+- Calientes identificados: ${(st.segs?.h?.[0]||0)}, compraron: ${(st.segs?.h?.[3]||0)}
+- Tibios identificados: ${(st.segs?.w?.[0]||0)}, compraron: ${(st.segs?.w?.[3]||0)}
+- Fríos identificados: ${(st.segs?.c?.[0]||0)}, compraron: ${(st.segs?.c?.[3]||0)}`;
+  // Add to conversation
+  aiConversation.push({role:'user',content:text});
+  const messages=[
+    {role:'user',content:launchContext+'\n\n'+aiConversation[0].content},
+    ...aiConversation.slice(1)
+  ];
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || '';
+    const response=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({
+        system:currentAgent.system+'\n\nResponde siempre en español. Sé concreto, práctico y orientado a resultados. Cuando des recomendaciones, sé específico y accionable.',
+        messages:messages
+      })
+    });
+    const data=await response.json();
+    const reply=data.content?.[0]?.text||'Error al obtener respuesta.';
+    aiConversation.push({role:'assistant',content:reply});
+    const thinking=document.getElementById('thinking-msg');
+    if(thinking){
+      thinking.id='';
+      thinking.classList.remove('thinking');
+      thinking.innerHTML=`<div class="msg-name">${currentAgent.name}</div>${reply.replace(/\n/g,'<br>')}`;
+    }
+  } catch(e) {
+    const thinking=document.getElementById('thinking-msg');
+    if(thinking){thinking.innerHTML=`<div class="msg-name">${currentAgent.name}</div>⚠ Error de conexión. Verifica que la app esté corriendo en el servidor con tu API key configurada.`;}
+  }
+  sendBtn.disabled=false;
+  chatArea.scrollTop=chatArea.scrollHeight;
+}
+
+// ══════════ REPORTS ══════════
+function renderReports(){
+  const v=st.ventas,c=st.cont,g=st.grupo,w=st.webinar;
+  const totalRev=v*cfg.price;
+  const myComm=Math.round(totalRev*(cfg.comm/100)/cfg.partners);
+  const projTotal=cfg.price*cfg.spots;
+  const projComm=Math.round(projTotal*(cfg.comm/100)/cfg.partners);
+  const convRate=c>0?((v/c)*100).toFixed(1):0;
+  const pct=cfg.spots>0?Math.round((v/cfg.spots)*100):0;
+  const date=new Date().toLocaleDateString('es-ES');
+
+  const avanceEl=document.getElementById('rp-avance');
+  if(avanceEl)avanceEl.innerHTML=`<h4>REPORTE DE AVANCE · ${date}</h4>
+    <div style="margin-bottom:.8rem;font-size:.8rem;color:var(--text-mid)">${cfg.program} · ${cfg.client} · ${cfg.niche}</div>
+    <div class="rp-stat"><span>Contactados</span><span class="rp-val">${c}</span></div>
+    <div class="rp-stat"><span>En grupo WA</span><span class="rp-val">${g}</span></div>
+    <div class="rp-stat"><span>Reg. webinar</span><span class="rp-val">${w}</span></div>
+    <div class="rp-stat"><span>Ventas cerradas</span><span class="rp-val sv-green">${v} / ${cfg.spots}</span></div>
+    <div class="rp-stat"><span>Tasa de conversión</span><span class="rp-val">${convRate}%</span></div>
+    <div class="rp-stat"><span>Meta alcanzada</span><span class="rp-val">${pct}%</span></div>`;
+
+  const finEl=document.getElementById('rp-financiero');
+  if(finEl)finEl.innerHTML=`<h4>REPORTE FINANCIERO · ${date}</h4>
+    <div style="margin-bottom:.8rem;font-size:.8rem;color:var(--text-mid)">${cfg.program} · Precio: $${cfg.price} · ${cfg.spots} plazas</div>
+    <div class="rp-stat"><span>Facturación actual</span><span class="rp-val sv-gold">$${totalRev.toLocaleString()}</span></div>
+    <div class="rp-stat"><span>Tu comisión actual</span><span class="rp-val sv-green">$${myComm.toLocaleString()}</span></div>
+    <div class="rp-stat"><span>Proyección 100% lleno</span><span class="rp-val">$${projTotal.toLocaleString()}</span></div>
+    <div class="rp-stat"><span>Tu comisión proyectada</span><span class="rp-val">$${projComm.toLocaleString()}</span></div>
+    <div class="rp-stat"><span>Plazas restantes</span><span class="rp-val">${cfg.spots-v}</span></div>
+    <div class="rp-stat"><span>Ingresos faltantes</span><span class="rp-val">$${((cfg.spots-v)*cfg.price).toLocaleString()}</span></div>`;
+}
+
+function exportPDF(type){
+  renderReports();
+  const el=document.getElementById('rp-'+type);
+  if(!el)return;
+  const content=el.innerText;
+  const title=type==='avance'?'Reporte de Avance':'Reporte Financiero';
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>${title} · ${cfg.program}</title><style>
+    body{font-family:Georgia,serif;background:#fff;color:#222;padding:40px;max-width:700px;margin:0 auto}
+    h1{font-size:1.4rem;border-bottom:2px solid #333;padding-bottom:.5rem;margin-bottom:1.5rem}
+    .meta{font-size:.85rem;color:#666;margin-bottom:1.5rem}
+    .row{display:flex;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid #eee;font-size:.9rem}
+    .val{font-weight:700;font-size:1rem}
+    .footer{margin-top:2rem;font-size:.75rem;color:#999;text-align:center}
+  </style></head><body>
+    <h1>Nexus Agency · ${title}</h1>
+    <div class="meta">${cfg.program} · ${cfg.client} · ${cfg.niche} · ${new Date().toLocaleDateString('es-ES')}</div>
+    ${Array.from(el.querySelectorAll('.rp-stat')).map(r=>`<div class="row"><span>${r.children[0].textContent}</span><span class="val">${r.children[1].textContent}</span></div>`).join('')}
+    <div class="footer">Generado por Nexus Agency Launch Command Center</div>
+  </body></html>`);
+  win.document.close();
+  setTimeout(()=>win.print(),500);
+}
+
+function copyReport(type){
+  renderReports();
+  const el=document.getElementById('rp-'+type);
+  if(!el)return;
+  const title=type==='avance'?'REPORTE DE AVANCE':'REPORTE FINANCIERO';
+  let text=`${title} · ${new Date().toLocaleDateString('es-ES')}\n`;
+  text+=`${cfg.program} · ${cfg.client}\n${'─'.repeat(40)}\n`;
+  el.querySelectorAll('.rp-stat').forEach(r=>{text+=`${r.children[0].textContent}: ${r.children[1].textContent}\n`;});
+  text+=`\nGenerado por Nexus Agency`;
+  navigator.clipboard.writeText(text).then(()=>showToast('✓ Reporte copiado'));
+}
+
+// ══════════ MISC ══════════
+function editDays(){const v=prompt('¿En cuántos días es el webinar?',cfg.days);if(v!==null&&!isNaN(+v)){cfg.days=+v;setTxt('daysNum',cfg.days);saveCurrentState();}}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ══════════ MSG EDITOR ══════════
+function openMsgEditor() {
+  const m = getMsgs();
+  let html = '';
+  msgKeys.forEach(tab => {
+    html += `<div style="margin-bottom:1.5rem;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--accent2);margin-bottom:.8rem;padding-bottom:.4rem;border-bottom:1px solid rgba(108,99,255,.2);">${tab}</div>`;
+    m[tab].forEach((msg, i) => {
+      html += `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(108,99,255,.15);padding:1rem;margin-bottom:.8rem;">
+        <div style="display:flex;gap:.8rem;margin-bottom:.6rem;">
+          <input value="${msg.title.replace(/"/g,'&quot;')}" data-tab="${tab}" data-idx="${i}" data-field="title"
+            style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(108,99,255,.2);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.8rem;padding:.4rem .7rem;outline:none;" 
+            placeholder="Título" class="msg-edit-input"/>
+          <select data-tab="${tab}" data-idx="${i}" data-field="seg"
+            style="background:rgba(255,255,255,.05);border:1px solid rgba(108,99,255,.2);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.75rem;padding:.4rem;outline:none;" class="msg-edit-input">
+            <option value="hot" ${msg.seg==='hot'?'selected':''}>🔥 Caliente</option>
+            <option value="warm" ${msg.seg==='warm'?'selected':''}>🌤 Tibio</option>
+            <option value="cold" ${msg.seg==='cold'?'selected':''}>❄️ Frío</option>
+            <option value="all" ${msg.seg==='all'?'selected':''}>👥 Grupo</option>
+          </select>
+        </div>
+        <textarea data-tab="${tab}" data-idx="${i}" data-field="text" rows="4"
+          style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(108,99,255,.2);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.85rem;padding:.6rem .8rem;outline:none;resize:vertical;margin-bottom:.5rem;" class="msg-edit-input">${msg.text}</textarea>
+        <input value="${msg.note.replace(/"/g,'&quot;')}" data-tab="${tab}" data-idx="${i}" data-field="note"
+          style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(108,99,255,.2);color:rgba(240,238,248,.5);font-family:'Barlow Condensed',sans-serif;font-size:.75rem;padding:.4rem .7rem;outline:none;" 
+          placeholder="Nota táctica" class="msg-edit-input"/>
+        <button onclick="removeMsgItem('${tab}',${i})" style="margin-top:.5rem;background:none;border:1px solid rgba(232,64,64,.3);color:rgba(232,64,64,.6);font-family:'Barlow Condensed',sans-serif;font-size:.65rem;padding:.25rem .6rem;cursor:pointer;letter-spacing:.1em;">✕ Eliminar</button>
+      </div>`;
+    });
+    html += `<button onclick="addMsgItem('${tab}')" style="width:100%;padding:.5rem;background:rgba(108,99,255,.08);border:1px dashed rgba(108,99,255,.3);color:var(--accent2);font-family:'Barlow Condensed',sans-serif;font-size:.72rem;cursor:pointer;letter-spacing:.1em;">+ Agregar mensaje en ${tab}</button>
+    </div>`;
+  });
+  document.getElementById('msgEditorBody').innerHTML = html;
+  document.getElementById('msgEditorOverlay').style.display = 'flex';
+}
+
+function addMsgItem(tab) {
+  const m = JSON.parse(JSON.stringify(getMsgs()));
+  m[tab].push({title:'Nuevo mensaje',seg:'all',note:'Nota táctica',text:'Escribe el mensaje aquí...'});
+  editableMsgs = m;
+  openMsgEditor();
+}
+
+function removeMsgItem(tab, idx) {
+  const m = JSON.parse(JSON.stringify(getMsgs()));
+  m[tab].splice(idx, 1);
+  editableMsgs = m;
+  openMsgEditor();
+}
+
+function saveMsgEdits() {
+  const m = JSON.parse(JSON.stringify(getMsgs()));
+  document.querySelectorAll('.msg-edit-input').forEach(el => {
+    const {tab, idx, field} = el.dataset;
+    if (!m[tab] || !m[tab][+idx]) return;
+    m[tab][+idx][field] = el.value;
+  });
+  editableMsgs = m;
+  st.editableMsgs = m;
+  closeMsgEditor();
+  renderMessages(0);
+  saveCurrentState();
+  showToast('✓ Mensajes guardados');
+}
+
+function closeMsgEditor() { document.getElementById('msgEditorOverlay').style.display = 'none'; }
+
+// ══════════ OBJ EDITOR ══════════
+function openObjEditor() {
+  const o = getObjs();
+  let html = o.map((obj, i) => `
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(108,99,255,.15);padding:1rem;margin-bottom:.8rem;">
+      <div style="display:flex;gap:.8rem;margin-bottom:.6rem;align-items:center;">
+        <input value="${obj.e}" data-idx="${i}" data-field="e" style="width:50px;background:rgba(255,255,255,.05);border:1px solid rgba(108,99,255,.2);color:#fff;font-size:1.2rem;padding:.3rem;text-align:center;outline:none;" class="obj-edit-input"/>
+        <input value="${obj.t.replace(/"/g,'&quot;')}" data-idx="${i}" data-field="t" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(108,99,255,.2);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.85rem;padding:.4rem .7rem;outline:none;" placeholder="Título objeción" class="obj-edit-input"/>
+        <button onclick="removeObjItem(${i})" style="background:none;border:1px solid rgba(232,64,64,.3);color:rgba(232,64,64,.6);font-family:'Barlow Condensed',sans-serif;font-size:.65rem;padding:.25rem .6rem;cursor:pointer;">✕</button>
+      </div>
+      <input value="${obj.when.replace(/"/g,'&quot;')}" data-idx="${i}" data-field="when" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(108,99,255,.2);color:rgba(240,238,248,.6);font-family:'Barlow Condensed',sans-serif;font-size:.75rem;padding:.4rem .7rem;outline:none;margin-bottom:.5rem;" placeholder="¿Cuándo usar?" class="obj-edit-input"/>
+      <textarea data-idx="${i}" data-field="r" rows="3" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(108,99,255,.2);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.85rem;padding:.6rem .8rem;outline:none;resize:vertical;" class="obj-edit-input">${obj.r}</textarea>
+    </div>`).join('');
+  html += `<button onclick="addObjItem()" style="width:100%;padding:.5rem;background:rgba(108,99,255,.08);border:1px dashed rgba(108,99,255,.3);color:var(--accent2);font-family:'Barlow Condensed',sans-serif;font-size:.72rem;cursor:pointer;letter-spacing:.1em;">+ Agregar objeción</button>`;
+  document.getElementById('objEditorBody').innerHTML = html;
+  document.getElementById('objEditorOverlay').style.display = 'flex';
+}
+
+function addObjItem() {
+  editableObjs = JSON.parse(JSON.stringify(getObjs()));
+  editableObjs.push({e:'💬',t:'"Nueva objeción"',when:'Cuándo usar esta respuesta',r:'Escribe la respuesta aquí...'});
+  openObjEditor();
+}
+
+function removeObjItem(idx) {
+  editableObjs = JSON.parse(JSON.stringify(getObjs()));
+  editableObjs.splice(idx, 1);
+  openObjEditor();
+}
+
+function saveObjEdits() {
+  const o = JSON.parse(JSON.stringify(getObjs()));
+  document.querySelectorAll('.obj-edit-input').forEach(el => {
+    const {idx, field} = el.dataset;
+    if (!o[+idx]) return;
+    o[+idx][field] = el.value;
+  });
+  editableObjs = o;
+  st.editableObjs = o;
+  closeObjEditor();
+  renderObjeciones();
+  saveCurrentState();
+  showToast('✓ Objeciones guardadas');
+}
+
+function closeObjEditor() { document.getElementById('objEditorOverlay').style.display = 'none'; }
+
+// ══════════ INIT ══════════
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    enterDashboard();
+  }
+})();
+updateCalc();
+</script>
+</body>
+</html>
