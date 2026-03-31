@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus Agency · Planes</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Barlow+Condensed:wght@300;400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+body { background:#08080f; color:#f0eef8; font-family:'Barlow',sans-serif; min-height:100vh; }
+
+/* ── BACKGROUND ── */
+body::before {
+  content:''; position:fixed; inset:0; z-index:0;
+  background: radial-gradient(ellipse at 20% 20%, rgba(108,99,255,.12) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(108,99,255,.08) 0%, transparent 60%);
+  pointer-events:none;
+}
+
+.page { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:4rem 2rem; }
+
+/* ── HEADER ── */
+.logo { font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:900; color:#fff; letter-spacing:-.01em; }
+.logo-sub { font-family:'Barlow Condensed',sans-serif; font-size:.55rem; font-weight:700; letter-spacing:.35em; text-transform:uppercase; color:rgba(240,238,248,.3); margin-top:.15rem; }
+nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:5rem; }
+.nav-back { background:none; border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.5); font-family:'Barlow Condensed',sans-serif; font-size:.68rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; padding:.4rem 1rem; cursor:pointer; text-decoration:none; transition:all .2s; }
+.nav-back:hover { border-color:rgba(108,99,255,.4); color:#A89CFF; }
+
+/* ── HERO ── */
+.hero { text-align:center; margin-bottom:3.5rem; }
+.hero-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:.62rem; font-weight:700; letter-spacing:.4em; text-transform:uppercase; color:#A89CFF; margin-bottom:.8rem; }
+.hero-title { font-family:'Playfair Display',serif; font-size:clamp(2rem,5vw,3.2rem); font-weight:900; color:#fff; line-height:1.1; margin-bottom:1rem; }
+.hero-title em { font-style:italic; color:#A89CFF; }
+.hero-sub { font-family:'Barlow',sans-serif; font-size:1rem; color:rgba(240,238,248,.5); max-width:480px; margin:0 auto; line-height:1.6; }
+
+/* ── TOGGLE ── */
+.toggle-wrap { display:flex; align-items:center; justify-content:center; gap:1rem; margin-bottom:3rem; }
+.toggle-label { font-family:'Barlow Condensed',sans-serif; font-size:.78rem; font-weight:700; letter-spacing:.1em; color:rgba(240,238,248,.5); cursor:pointer; transition:color .2s; }
+.toggle-label.active { color:#fff; }
+.toggle { position:relative; width:48px; height:26px; cursor:pointer; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:rgba(108,99,255,.3); border:1px solid rgba(108,99,255,.4); transition:.3s; }
+.toggle-slider::before { content:''; position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:#fff; transition:.3s; }
+.toggle input:checked + .toggle-slider { background:rgba(108,99,255,.6); }
+.toggle input:checked + .toggle-slider::before { transform:translateX(22px); }
+.save-badge { background:rgba(74,170,114,.15); border:1px solid rgba(74,170,114,.3); color:#4AAA72; font-family:'Barlow Condensed',sans-serif; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:.2rem .6rem; }
+
+/* ── PRICING CARD ── */
+.cards { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; max-width:700px; margin:0 auto 3rem; }
+@media(max-width:600px) { .cards { grid-template-columns:1fr; } }
+
+.card {
+  background:#0d0d18; border:1px solid rgba(255,255,255,.07);
+  padding:2rem; position:relative; transition:border-color .2s;
+}
+.card:hover { border-color:rgba(108,99,255,.3); }
+.card.featured { border-color:rgba(108,99,255,.4); background:#0f0f1e; }
+.card.featured::before { content:'MÁS POPULAR'; position:absolute; top:-1px; left:50%; transform:translateX(-50%); background:#6C63FF; color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:.55rem; font-weight:700; letter-spacing:.2em; padding:.2rem .8rem; }
+
+.card-name { font-family:'Barlow Condensed',sans-serif; font-size:.65rem; font-weight:700; letter-spacing:.3em; text-transform:uppercase; color:rgba(240,238,248,.4); margin-bottom:1.2rem; }
+.card-price { font-family:'Playfair Display',serif; font-size:3rem; font-weight:900; color:#fff; line-height:1; }
+.card-price span { font-family:'Barlow Condensed',sans-serif; font-size:1rem; font-weight:400; color:rgba(240,238,248,.4); vertical-align:middle; }
+.card-period { font-family:'Barlow Condensed',sans-serif; font-size:.72rem; color:rgba(240,238,248,.35); margin-top:.3rem; margin-bottom:1.5rem; }
+.card-orig { font-family:'Barlow Condensed',sans-serif; font-size:.72rem; color:rgba(240,238,248,.3); text-decoration:line-through; }
+
+.features { list-style:none; margin-bottom:2rem; }
+.features li { font-family:'Barlow Condensed',sans-serif; font-size:.82rem; color:rgba(240,238,248,.65); padding:.4rem 0; border-bottom:1px solid rgba(255,255,255,.04); display:flex; align-items:center; gap:.6rem; }
+.features li::before { content:'✓'; color:#4AAA72; font-weight:700; flex-shrink:0; }
+
+.btn-pay {
+  width:100%; padding:.85rem; border:none; cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif; font-size:.78rem; font-weight:700;
+  letter-spacing:.2em; text-transform:uppercase; transition:all .2s;
+}
+.btn-pay.primary { background:#6C63FF; color:#fff; }
+.btn-pay.primary:hover { background:#7b73ff; }
+.btn-pay.secondary { background:transparent; border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.6); }
+.btn-pay.secondary:hover { border-color:rgba(108,99,255,.4); color:#A89CFF; }
+.btn-pay:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ── TRUST ── */
+.trust { text-align:center; display:flex; justify-content:center; gap:2rem; flex-wrap:wrap; }
+.trust-item { font-family:'Barlow Condensed',sans-serif; font-size:.72rem; color:rgba(240,238,248,.35); display:flex; align-items:center; gap:.4rem; }
+
+/* ── AUTH MODAL ── */
+#authModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:1000; align-items:center; justify-content:center; }
+#authModal.open { display:flex; }
+.auth-box { background:#0d0d18; border:1px solid rgba(108,99,255,.3); width:min(400px,95vw); padding:2rem; }
+.auth-title { font-family:'Playfair Display',serif; font-size:1.3rem; color:#fff; margin-bottom:1.5rem; }
+.auth-tabs { display:flex; border:1px solid rgba(108,99,255,.2); margin-bottom:1.2rem; overflow:hidden; }
+.auth-tab { flex:1; padding:.6rem; background:transparent; border:none; color:rgba(240,238,248,.35); font-family:'Barlow Condensed',sans-serif; font-size:.7rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; cursor:pointer; transition:all .2s; }
+.auth-tab.active { background:rgba(108,99,255,.2); color:#fff; }
+.auth-input { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(108,99,255,.2); color:#f0eef8; font-family:'Barlow Condensed',sans-serif; font-size:.9rem; padding:.65rem .9rem; outline:none; margin-bottom:.8rem; transition:border-color .2s; }
+.auth-input:focus { border-color:#6C63FF; }
+.auth-btn { width:100%; padding:.8rem; background:#6C63FF; border:none; color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:.75rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase; cursor:pointer; transition:background .2s; }
+.auth-btn:hover { background:#7b73ff; }
+.auth-msg { font-family:'Barlow Condensed',sans-serif; font-size:.72rem; color:#ff6b6b; text-align:center; margin-top:.6rem; min-height:1rem; }
+
+.toast { position:fixed; bottom:1.5rem; right:1.5rem; background:#0d0d18; border:1px solid rgba(108,99,255,.3); color:#f0eef8; font-family:'Barlow Condensed',sans-serif; font-size:.78rem; font-weight:700; padding:.7rem 1.2rem; z-index:9999; opacity:0; transform:translateY(8px); transition:all .25s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <nav>
+    <div>
+      <div class="logo">Nexus Agency</div>
+      <div class="logo-sub">Command Center</div>
+    </div>
+    <a href="/" class="nav-back">← Volver a la Agencia</a>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-eyebrow">Planes y precios</div>
+    <h1 class="hero-title">Una herramienta.<br><em>Todo lo que necesitas.</em></h1>
+    <p class="hero-sub">CRM, prospección, contabilidad, fases, mensajes, agentes de IA y biblioteca — en un solo lugar.</p>
+  </div>
+
+  <!-- Toggle mensual/anual -->
+  <div class="toggle-wrap">
+    <span class="toggle-label active" id="label-monthly">Mensual</span>
+    <label class="toggle">
+      <input type="checkbox" id="billingToggle" onchange="switchBilling()">
+      <span class="toggle-slider"></span>
+    </label>
+    <span class="toggle-label" id="label-yearly">Anual <span class="save-badge">Ahorra 20%</span></span>
+  </div>
+
+  <!-- Cards -->
+  <div class="cards">
+    <!-- Monthly -->
+    <div class="card" id="card-monthly">
+      <div class="card-name">Plan mensual</div>
+      <div class="card-price">€25 <span>/ mes</span></div>
+      <div class="card-period">Cancela cuando quieras</div>
+      <ul class="features">
+        <li>Dashboard completo</li>
+        <li>CRM ilimitado</li>
+        <li>Prospección Instagram</li>
+        <li>Contabilidad</li>
+        <li>Fases personalizables</li>
+        <li>6 Agentes de IA</li>
+        <li>Biblioteca de PDFs</li>
+        <li>Mensajes & Objeciones</li>
+      </ul>
+      <button class="btn-pay primary" onclick="startCheckout('monthly')" id="btn-monthly">
+        Empezar ahora →
+      </button>
+    </div>
+
+    <!-- Yearly -->
+    <div class="card featured" id="card-yearly" style="display:none;">
+      <div class="card-name">Plan anual</div>
+      <div class="card-price">€20 <span>/ mes</span></div>
+      <div class="card-period">
+        €240 al año · <span class="card-orig">€300</span> · Ahorras €60
+      </div>
+      <ul class="features">
+        <li>Todo lo del plan mensual</li>
+        <li>Acceso prioritario a nuevas features</li>
+        <li>Soporte por email prioritario</li>
+        <li>2 meses gratis</li>
+      </ul>
+      <button class="btn-pay primary" onclick="startCheckout('yearly')" id="btn-yearly">
+        Empezar ahora →
+      </button>
+    </div>
+  </div>
+
+  <div class="trust">
+    <span class="trust-item">🔒 Pago seguro con Stripe</span>
+    <span class="trust-item">💳 Tarjeta de crédito o débito</span>
+    <span class="trust-item">❌ Sin permanencia</span>
+    <span class="trust-item">🌍 Acceso desde cualquier dispositivo</span>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div id="authModal">
+  <div class="auth-box">
+    <div class="auth-title">Crea tu cuenta para continuar</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Iniciar sesión</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchTab('signup')">Registrarse</button>
+    </div>
+    <input class="auth-input" id="authEmail" type="email" placeholder="tu@email.com"/>
+    <input class="auth-input" id="authPassword" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doAuth()"/>
+    <button class="auth-btn" onclick="doAuth()">Continuar →</button>
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL = 'https://hmvduevkpgvkihqfwxnl.supabase.co';
+const SUPA_KEY = 'sb_publishable_jicNZ2mxc5fjicKNKDZrAA_oMU2oNLJ';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+let currentUser = null;
+let pendingPlan = null;
+let authMode = 'login';
+
+// Check if already logged in
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) currentUser = session.user;
+})();
+
+function switchBilling() {
+  const yearly = document.getElementById('billingToggle').checked;
+  document.getElementById('card-monthly').style.display = yearly ? 'none' : 'block';
+  document.getElementById('card-yearly').style.display = yearly ? 'block' : 'none';
+  document.getElementById('label-monthly').classList.toggle('active', !yearly);
+  document.getElementById('label-yearly').classList.toggle('active', yearly);
+}
+
+async function startCheckout(plan) {
+  if (!currentUser) {
+    pendingPlan = plan;
+    document.getElementById('authModal').classList.add('open');
+    return;
+  }
+  await doCheckout(plan);
+}
+
+async function doCheckout(plan) {
+  const btn = document.getElementById(`btn-${plan}`);
+  btn.disabled = true;
+  btn.textContent = 'Redirigiendo…';
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || '';
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ plan })
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      showToast('⚠ ' + (data.error || 'Error al crear sesión de pago'));
+      btn.disabled = false;
+      btn.textContent = 'Empezar ahora →';
+    }
+  } catch(e) {
+    showToast('⚠ Error de conexión');
+    btn.disabled = false;
+    btn.textContent = 'Empezar ahora →';
+  }
+}
+
+// Auth
+function switchTab(tab) {
+  authMode = tab;
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+}
+
+async function doAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const msg = document.getElementById('authMsg');
+  if (!email||!pass) { msg.textContent='Completa email y contraseña'; return; }
+  msg.textContent='Verificando…'; msg.style.color='rgba(240,238,248,.4)';
+
+  const fn = authMode==='login'
+    ? sb.auth.signInWithPassword({email,password:pass})
+    : sb.auth.signUp({email,password:pass});
+  const {data,error} = await fn;
+
+  if (error) { msg.textContent=error.message; msg.style.color='#ff6b6b'; return; }
+  if (authMode==='signup') { msg.textContent='✓ Revisa tu email para confirmar'; msg.style.color='#4AAA72'; return; }
+
+  currentUser = data.user;
+  document.getElementById('authModal').classList.remove('open');
+  if (pendingPlan) { await doCheckout(pendingPlan); pendingPlan=null; }
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// Show success message if redirected back
+if (new URLSearchParams(location.search).get('payment')==='success') {
+  document.querySelector('.hero-title').innerHTML = '¡Pago exitoso! <em>Bienvenido.</em>';
+  document.querySelector('.hero-sub').textContent = 'Tu cuenta está activa. Ya puedes acceder al dashboard.';
+  document.querySelector('.cards').innerHTML = '<div style="text-align:center;padding:2rem;"><a href="/dashboard.html" style="display:inline-block;padding:.9rem 2rem;background:#6C63FF;color:#fff;font-family:\'Barlow Condensed\',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;">Ir al Dashboard →</a></div>';
+}
+</script>
+</body>
+</html>
